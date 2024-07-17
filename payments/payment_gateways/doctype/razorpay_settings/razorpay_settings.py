@@ -207,7 +207,8 @@ class RazorpaySettings(Document):
 		# Creating Orders https://razorpay.com/docs/api/orders/
 
 		# convert rupees to paisa
-		kwargs["amount"] *= 100
+		# kwargs["amount"] *= 100
+		# commented the above line, as the paisa convertion is being handled in the frontend POS
 
 		# Create integration log
 		integration_request = create_request_log(kwargs, service_name="Razorpay")
@@ -368,6 +369,17 @@ class RazorpaySettings(Document):
 
 		return result
 
+	def get_razorpay_order(self, amount, currency, receipt, doctype, docname):
+
+		payment_details = {
+			"amount": amount,
+			"currency": currency,
+			"receipt": receipt,
+			'reference_doctype': doctype,
+			'reference_docname': docname
+		}
+
+		return self.create_order(**payment_details)
 
 def capture_payment(is_sandbox=False, sanbox_response=None):
 	"""
@@ -424,12 +436,14 @@ def get_api_key():
 
 
 @frappe.whitelist(allow_guest=True)
-def get_order(doctype, docname):
+def get_order(amount, currency, receipt, doctype, docname):
 	# Order returned to be consumed by razorpay.js
-	doc = frappe.get_doc(doctype, docname)
+	#doc = frappe.get_doc(doctype, docname)
+	controller = frappe.get_doc("Razorpay Settings") # added controller implementation in "Razorpay Settings"
 	try:
 		# Do not use run_method here as it fails silently
-		return doc.get_razorpay_order()
+		#return doc.get_razorpay_order()
+		return controller.get_razorpay_order(amount, currency, receipt, doctype, docname) # added controller implementation in "Razorpay Settings"
 	except AttributeError:
 		frappe.log_error(
 			frappe.get_traceback(), _("Controller method get_razorpay_order missing")

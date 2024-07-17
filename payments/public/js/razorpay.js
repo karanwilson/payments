@@ -52,9 +52,15 @@ Razorpay Payment
 	}
 */
 
-frappe.provide("frappe.checkout");
+async function add_rzp_script() {
+	await frappe.provide("frappe.checkout");
+	const rzp_script = document.createElement('script');
+    rzp_script.setAttribute("src", "https://checkout.razorpay.com/v1/checkout.js");
+    document.head.appendChild(rzp_script);
+}
 
-frappe.require('https://checkout.razorpay.com/v1/checkout.js').then(() => {
+//frappe.require('https://checkout.razorpay.com/v1/checkout.js').then(() => {
+add_rzp_script().then(() => {
 	frappe.checkout.razorpay = class RazorpayCheckout {
 		constructor(opts) {
 			Object.assign(this, opts);
@@ -90,6 +96,9 @@ frappe.require('https://checkout.razorpay.com/v1/checkout.js').then(() => {
 		make_order() {
 			return new Promise(resolve => {
 				frappe.call("payments.payment_gateways.doctype.razorpay_settings.razorpay_settings.get_order", {
+					amount: this.amount,
+					currency: this.currency,
+					receipt: this.receipt,
 					doctype: this.doctype,
 					docname: this.docname
 				}).then(res => {
