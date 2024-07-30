@@ -2,7 +2,6 @@
 <wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
                   xmlns:tns="urn:assets/payments/FS"
                   xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
-                  xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"
                   xmlns:xsd="http://www.w3.org/2001/XMLSchema"
                   name="FS"
                   targetNamespace="urn:assets/payments/FS">
@@ -15,41 +14,27 @@
    -->
   <wsdl:types>
     <xsd:schema targetNamespace="urn:assets/payments/FS">
-      <!--xsd:import namespace="http://schemas.xmlsoap.org/soap/encoding/"/-->
-      <!--xsd:import namespace="http://schemas.xmlsoap.org/wsdl/"/-->
-        <xsd:element name="login">
-          <xsd:complexType>
-            <xsd:sequence>
-              <xsd:element name="strPID" type="xsd:string"/>
-              <xsd:element name="strPassword" type="xsd:string"/>
-            </xsd:sequence>
-          </xsd:complexType>
-        </xsd:element>
-        <xsd:element name="return">
-          <xsd:complexType>
+          <xsd:complexType name="response">
             <xsd:sequence>
               <xsd:element name="Result" type="xsd:string"/>
               <xsd:element name="ValidAccounts" type="xsd:string" minOccurs="0" maxOccurs="unbounded"/>
             </xsd:sequence>
           </xsd:complexType>
-        </xsd:element>
     </xsd:schema>
   </wsdl:types>
-
 
   <!--
       A wsdl `message` element is used to define a message
       exchanged between a web service, consisting of zero
       or more `part`s.
    -->
-
   <wsdl:message name="LoginRequest">
-    <wsdl:part element="tns:login" name="parameters"/>
+    <wsdl:part name="strPID" type="xsd:string"/>
+    <wsdl:part name="strPassword" type="xsd:string"/>
   </wsdl:message>
   <wsdl:message name="LoginResponse">
-    <wsdl:part element="tns:return" name="parameters"/>
+    <wsdl:part name="return" type="tns:response"/>
   </wsdl:message>
-
 
   <!--
       A WSDL `portType` is used to combine multiple `message`s
@@ -68,13 +53,11 @@
       In this case, we are using SOAP.
    -->
   <wsdl:binding name="FS_SoapBinding" type="tns:FS_port">
-    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <soap:binding style="rpc" transport="http://schemas.xmlsoap.org/soap/http"/>
     <wsdl:operation name="login">
-      <soap:operation soapAction="urn:assets/payments/FS/login" style="rpc"/>
+      <soap:operation soapAction="urn:assets/payments/FS/login"/>
       <wsdl:input>
         <soap:body use="encoded"/>
-        <!--soap:body use="encoded" namespace="urn:assets/payments/FS"
-          encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/-->
       </wsdl:input>
       <wsdl:output>
         <soap:body use="encoded"/>

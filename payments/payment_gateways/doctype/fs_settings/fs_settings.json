@@ -10,6 +10,7 @@
   "fs_user",
   "fs_password",
   "fapi_url",
+  "login_status",
   "sandbox"
  ],
  "fields": [
@@ -38,12 +39,18 @@
    "fieldtype": "Data",
    "label": "FAPI URL",
    "read_only": 1
+  },
+  {
+   "fieldname": "login_status",
+   "fieldtype": "Data",
+   "label": "Login Status",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-07-30 16:08:50.163521",
+ "modified": "2024-07-31 00:57:50.696035",
  "modified_by": "Administrator",
  "module": "Payment Gateways",
  "name": "FS Settings",

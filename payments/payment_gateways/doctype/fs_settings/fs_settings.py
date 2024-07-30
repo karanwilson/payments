@@ -7,22 +7,10 @@ from frappe.model.document import Document
 from frappe.utils import call_hook_method
 from payments.utils import create_payment_gateway
 
-from zeep import Client #,Settings
+from zeep import Client #, Settings
 
 class FSSettings(Document):
 	supported_currencies = ["INR"]
-
-	def fapi_login(self):
-		auth = {
-			"strPID": self.fs_user,
-			"strPassword": self.fs_password
-		}
-		#frappe.throw(auth["strPassword"])
-		# create the Zeep SOAP client object
-		fs_client = Client("assets/payments/FS.wsdl")
-		#return self.fs_client.service.
-		res = fs_client.service.login(auth)
-		frappe.throw(res["Result"])
 
 	def	validate(self):
 		create_payment_gateway("FS")
@@ -31,11 +19,19 @@ class FSSettings(Document):
 			self.validate_fs_credentials()
 	
 	def	validate_fs_credentials(self):
-		self.fapi_login()
 		# login to SOAP Server
-		#res = self.fapi_login()
-		#if res["Result"] != "OK":
-		#	frappe.throw(res["Result"])
+		res = self.fapi_login()
+		self.login_status = res["Result"]
+		if self.login_status == "OK":
+			#frappe.throw(res["Result"])
+			pass
+
+	def fapi_login(self):
+		# create the Zeep SOAP client object
+		strPID = self.fs_user
+		strPassword = self.get_password(fieldname="fs_password", raise_exception=False)
+		fs_client = Client("assets/payments/FS.wsdl")
+		return fs_client.service.login(strPID, strPassword)
 
 	def	validate_transaction_currency(self, currency):
 		if currency not in self.supported_currencies:
