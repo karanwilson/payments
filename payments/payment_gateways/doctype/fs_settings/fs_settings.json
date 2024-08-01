@@ -11,7 +11,13 @@
   "fs_password",
   "fapi_url",
   "login_status",
-  "sandbox"
+  "last_login_at",
+  "token_response",
+  "token_encrypted",
+  "encrypt_data",
+  "encrypt_iv",
+  "token_decrypted",
+  "testing"
  ],
  "fields": [
   {
@@ -29,12 +35,6 @@
    "reqd": 1
   },
   {
-   "default": "0",
-   "fieldname": "sandbox",
-   "fieldtype": "Check",
-   "label": "Sandbox"
-  },
-  {
    "fieldname": "fapi_url",
    "fieldtype": "Data",
    "label": "FAPI URL",
@@ -45,12 +45,49 @@
    "fieldtype": "Data",
    "label": "Login Status",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Dummy check box: creates a change in the Doc for testing the doc save hook/trigger.",
+   "fieldname": "testing",
+   "fieldtype": "Check",
+   "label": "Testing"
+  },
+  {
+   "fieldname": "last_login_at",
+   "fieldtype": "Datetime",
+   "label": "Last Login At"
+  },
+  {
+   "fieldname": "token_response",
+   "fieldtype": "Data",
+   "label": "Token Response"
+  },
+  {
+   "fieldname": "token_encrypted",
+   "fieldtype": "Data",
+   "label": "Token Encrypted"
+  },
+  {
+   "fieldname": "encrypt_data",
+   "fieldtype": "Data",
+   "label": "Encrypt Data"
+  },
+  {
+   "fieldname": "encrypt_iv",
+   "fieldtype": "Data",
+   "label": "Encrypt IV"
+  },
+  {
+   "fieldname": "token_decrypted",
+   "fieldtype": "Data",
+   "label": "Token Decrypted"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-07-31 00:57:50.696035",
+ "modified": "2024-08-01 12:40:12.308870",
  "modified_by": "Administrator",
  "module": "Payment Gateways",
  "name": "FS Settings",
