@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import call_hook_method, flt
+from frappe.utils import call_hook_method
 from payments.utils import create_payment_gateway
 
 from zeep import Client #, Settings
@@ -98,7 +98,7 @@ def add_transfer(doc, method):
 			param = {
 				"strAccountNumberFrom": strAccountNumberFrom,
 				"strAccountNumberTo": doc.custom_fs_account_to,
-				"fAmount": flt(doc.paid_amount),
+				"fAmount": doc.paid_amount,
 				"strDescription": doc.custom_contribution_type,
 				#"check": "Yes",
 				#"token": transfer_token
