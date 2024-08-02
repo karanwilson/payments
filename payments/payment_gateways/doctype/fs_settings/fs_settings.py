@@ -44,8 +44,8 @@ class FSSettings(Document):
 		return login_res
 
 	def request_transfer_token(self):
-		param = [{"Req":""}]
-		token_res = fs_client.service.requestTransferToken(param)
+		request = {"transferToken":""}
+		token_res = fs_client.service.requestTransferToken(request)
 		#self.token_response = token_res
 		encrypted = urldecode(token_res)
 		#self.token_encrypted = encrypted[0][0]
@@ -93,19 +93,12 @@ def add_transfer(doc, method):
 	if login_res["Result"] == "OK":
 		transfer_token = fs_controller.request_transfer_token()
 		if (transfer_token):
-
 			strAccountNumberFrom = frappe.get_value("Customer", doc.party, "custom_fs_account_number")
-			param = {
-				"strAccountNumberFrom": strAccountNumberFrom,
-				"strAccountNumberTo": doc.custom_fs_account_to,
-				"fAmount": doc.paid_amount,
-				"strDescription": doc.custom_contribution_type,
-				#"check": "Yes",
-				#"token": transfer_token
-			}
+			strAccountNumberTo = doc.custom_fs_account_to
+			fAmount = str(doc.paid_amount)
+			strDescription = doc.custom_contribution_type
+			check = "Yes"
 			#with open('fapi_token8.txt', 'w') as file:
-			#	file.write(str(param))
-			#addTransfer_res = fs_client.service.addTransfer(param)
-			#frappe.throw(addTransfer_res)
-			testTransfer_res = fs_client.service.testTransfer(param)
-			frappe.throw(testTransfer_res)
+			#	file.write(str(strAccountNumberFrom, strAccountNumberTo, fAmount, strDescription, check, transfer_token))
+			addTransfer_res = fs_client.service.addTransfer(
+				strAccountNumberFrom, strAccountNumberTo, fAmount, strDescription, check, transfer_token)
