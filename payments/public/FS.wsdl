@@ -29,9 +29,40 @@
           </xsd:complexType>
           <xsd:complexType name="TokenResponse">
             <xsd:sequence>
-              <xsd:element name="Result" type="xsd:integer"/>
+              <xsd:element name="Result" type="xsd:string"/>
             </xsd:sequence>
           </xsd:complexType>
+
+          <xsd:complexType name="TransferRequest">
+            <xsd:sequence>
+              <xsd:element name="strAccountNumberFrom" type="xsd:string"/>
+              <xsd:element name="strAccountNumberTo" type="xsd:string"/>
+              <xsd:element name="fAmount" type="xsd:float"/>
+              <xsd:element name="strDescription" type="xsd:string"/>
+              <xsd:element name="check" type="xsd:string"/>
+              <xsd:element name="token" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:complexType>
+          <xsd:complexType name="TransferResponse">
+            <xsd:sequence>
+              <xsd:element name="Result" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:complexType>
+
+          <xsd:complexType name="testTransferRequest">
+            <xsd:sequence>
+              <xsd:element name="strAccountNumberFrom" type="xsd:string"/>
+              <xsd:element name="strAccountNumberTo" type="xsd:string"/>
+              <xsd:element name="fAmount" type="xsd:float"/>
+              <xsd:element name="strDescription" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:complexType>
+          <xsd:complexType name="testTransferResponse">
+            <xsd:sequence>
+              <xsd:element name="Result" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:complexType>
+
     </xsd:schema>
   </wsdl:types>
 
@@ -50,10 +81,23 @@
 
   <wsdl:message name="TokenRequest_msg">
     <wsdl:part name="param" type="tns:TokenRequest"/>
-    <!--wsdl:part name="request" type="xsd:string"/-->
   </wsdl:message>
   <wsdl:message name="TokenResponse_msg">
     <wsdl:part name="return" type="tns:TokenResponse"/>
+  </wsdl:message>
+
+  <wsdl:message name="addTransferRequest_msg">
+    <wsdl:part name="param" type="tns:TransferRequest"/>
+  </wsdl:message>
+  <wsdl:message name="addTransferResponse_msg">
+    <wsdl:part name="return" type="tns:TransferResponse"/>
+  </wsdl:message>
+
+  <wsdl:message name="testTransferRequest_msg">
+    <wsdl:part name="param" type="tns:testTransferRequest"/>
+  </wsdl:message>
+  <wsdl:message name="testTransferResponse_msg">
+    <wsdl:part name="return" type="tns:testTransferResponse"/>
   </wsdl:message>
 
   <!--
@@ -70,6 +114,16 @@
     <wsdl:operation name="requestTransferToken">
       <wsdl:input message="tns:TokenRequest_msg"/>
       <wsdl:output message="tns:TokenResponse_msg"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="addTransfer">
+      <wsdl:input message="tns:addTransferRequest_msg"/>
+      <wsdl:output message="tns:addTransferResponse_msg"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="testTransfer">
+      <wsdl:input message="tns:testTransferRequest_msg"/>
+      <wsdl:output message="tns:testTransferResponse_msg"/>
     </wsdl:operation>
 
   </wsdl:portType>
@@ -94,6 +148,26 @@
 
     <wsdl:operation name="requestTransferToken">
       <soap:operation soapAction="urn:assets/payments/FS/requestTransferToken"/>
+      <wsdl:input>
+        <soap:body use="encoded"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="encoded"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="addTransfer">
+      <soap:operation soapAction="urn:assets/payments/FS/addTransfer"/>
+      <wsdl:input>
+        <soap:body use="encoded"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="encoded"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="testTransfer">
+      <soap:operation soapAction="urn:assets/payments/FS/testTransfer"/>
       <wsdl:input>
         <soap:body use="encoded"/>
       </wsdl:input>
