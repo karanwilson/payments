@@ -102,3 +102,6 @@ def add_transfer(doc, method):
 			#	file.write(str(strAccountNumberFrom, strAccountNumberTo, fAmount, strDescription, check, transfer_token))
 			addTransfer_res = fs_client.service.addTransfer(
 				strAccountNumberFrom, strAccountNumberTo, fAmount, strDescription, check, transfer_token)
+			response = addTransfer_res["Message"]
+			frappe.throw(response)
+			# Explore whether to store the default FS transaction message, or request for a transaction ID..
