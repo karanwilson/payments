@@ -85,23 +85,35 @@ class FSSettings(Document):
 
 
 @frappe.whitelist(allow_guest=True)
-def add_transfer(doc, method):
-	fs_controller = frappe.get_doc("FS Settings")
-	# Add a login timeout check here
-	login_res = fs_controller.fapi_login()
+def add_transfer_contribution(doc, method):
+	if doc.custom_contribution_type:
+		fs_controller = frappe.get_doc("FS Settings")
+		# Add a login timeout check here
+		login_res = fs_controller.fapi_login()
 
-	if login_res["Result"] == "OK":
-		transfer_token = fs_controller.request_transfer_token()
-		if (transfer_token):
-			strAccountNumberFrom = frappe.get_value("Customer", doc.party, "custom_fs_account_number")
-			strAccountNumberTo = doc.custom_fs_account_to
-			fAmount = str(doc.paid_amount)
-			strDescription = doc.custom_contribution_type
-			check = "Yes"
-			#with open('fapi_token8.txt', 'w') as file:
-			#	file.write(str(strAccountNumberFrom, strAccountNumberTo, fAmount, strDescription, check, transfer_token))
-			addTransfer_res = fs_client.service.addTransfer(
-				strAccountNumberFrom, strAccountNumberTo, fAmount, strDescription, check, transfer_token)
-			response = addTransfer_res["Message"]
-			frappe.throw(response)
-			# Explore whether to store the default FS transaction message, or request for a transaction ID..
+		if login_res["Result"] == "OK":
+			transfer_token = fs_controller.request_transfer_token()
+			if (transfer_token):
+				strAccountNumberFrom = frappe.get_value("Customer", doc.party, "custom_fs_account_number")
+				strAccountNumberTo = doc.custom_fs_account_to
+				fAmount = str(doc.paid_amount)
+				strDescription = _("{0}, Transaction ID: {1}").format(doc.custom_contribution_type, doc.name)
+				check = "Yes"
+				#with open('fapi_token8.txt', 'w') as file:
+				#	file.write(str(strAccountNumberFrom, strAccountNumberTo, fAmount, strDescription, check, transfer_token))
+				addTransfer_res = fs_client.service.addTransfer(
+					strAccountNumberFrom, strAccountNumberTo, fAmount, strDescription, check, transfer_token)
+				# Explore whether to store the default FS transaction message, or request for a transaction ID..
+				doc.custom_remarks = 1
+				res = addTransfer_res["Result"]
+				doc.custom_fs_transfer_status = res
+				doc.remarks = addTransfer_res["Message"]
+				if res != "OK":
+					frappe.throw(res)
+		else:
+			frappe.throw(login_res["Result"])
+
+
+@frappe.whitelist(allow_guest=True)
+def add_transfer_billing():
+	pass
