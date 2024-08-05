@@ -105,14 +105,16 @@ def add_transfer_contribution(doc, method):
 						"strAccountNumberFrom": strAccountNumberFrom,
 						"strAccountNumberTo": strAccountNumberTo,
 						"fAmount": fAmount,
-						"strDescription": _("{0}, Payment ID: {1}").format(doc.custom_contribution_type, doc.name),
+						# String format example: EXTRA.CON/ACC-PAY-2024-00857/7OHL1V6ATI
+						# string[0:5] extracts the first 4 chars of the string
+						"strDescription": _("PTDC/{0}.CON/{1}").format((doc.custom_contribution_type)[0:5], (doc.name)[4:]),
 						"check": check,
 						"token": transfer_token
 					}
 					# Create integration log
 					integration_request = create_request_log(kwargs, service_name="FS")
 				# appending the integration_request name field as Transaction ID in strDescription
-				strDescription = _("{0}, Transaction ID: {1}").format(kwargs["strDescription"], integration_request.name)
+				strDescription = _("{0}/{1}").format(kwargs["strDescription"], integration_request.name)
 				addTransfer_res = fs_client.service.addTransfer(
 					strAccountNumberFrom, strAccountNumberTo, fAmount, strDescription, check, transfer_token)
 				# Explore whether to store the default FS transaction message, or request for a transaction ID..
