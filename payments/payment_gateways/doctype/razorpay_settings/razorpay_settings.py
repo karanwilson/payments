@@ -73,7 +73,7 @@ from frappe.integrations.utils import (
 	make_post_request,
 )
 from frappe.model.document import Document
-from frappe.utils import call_hook_method, cint, get_timestamp, get_url
+from frappe.utils import call_hook_method, cint, get_timestamp, get_url, flt
 
 from payments.utils import create_payment_gateway
 
@@ -209,6 +209,10 @@ class RazorpaySettings(Document):
 		# convert rupees to paisa
 		# kwargs["amount"] *= 100
 		# commented the above line, as the paisa convertion is being handled in the frontend POS
+
+		# ir_kwargs = kwargs
+		# ir_kwargs["amount"] = str(flt(kwargs.get("amount"), 2) / 100)
+		# setting the amount back from paisa to rupees, for the integration request
 
 		# Create integration log
 		integration_request = create_request_log(kwargs, service_name="Razorpay")

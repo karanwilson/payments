@@ -12,10 +12,6 @@
   "fapi_url",
   "login_status",
   "last_login_at",
-  "token_response",
-  "token_encrypted",
-  "encrypt_data",
-  "encrypt_iv",
   "token_decrypted",
   "testing"
  ],
@@ -59,26 +55,6 @@
    "label": "Last Login At"
   },
   {
-   "fieldname": "token_response",
-   "fieldtype": "Data",
-   "label": "Token Response"
-  },
-  {
-   "fieldname": "token_encrypted",
-   "fieldtype": "Data",
-   "label": "Token Encrypted"
-  },
-  {
-   "fieldname": "encrypt_data",
-   "fieldtype": "Data",
-   "label": "Encrypt Data"
-  },
-  {
-   "fieldname": "encrypt_iv",
-   "fieldtype": "Data",
-   "label": "Encrypt IV"
-  },
-  {
    "fieldname": "token_decrypted",
    "fieldtype": "Data",
    "label": "Token Decrypted"
@@ -87,7 +63,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-08-01 12:40:12.308870",
+ "modified": "2024-08-04 15:14:39.876118",
  "modified_by": "Administrator",
  "module": "Payment Gateways",
  "name": "FS Settings",

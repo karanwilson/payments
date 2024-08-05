@@ -5,13 +5,13 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import call_hook_method
+from frappe.integrations.utils import create_request_log
 from payments.utils import create_payment_gateway
 
 from zeep import Client #, Settings
 from base64 import b64decode
 from oauthlib.common import urldecode
 from Crypto.Cipher import AES
-#from Crypto.Util.Padding import pad, unpad
 from datetime import datetime
 
 class FSSettings(Document):
@@ -46,12 +46,8 @@ class FSSettings(Document):
 	def request_transfer_token(self):
 		request = {"transferToken":""}
 		token_res = fs_client.service.requestTransferToken(request)
-		#self.token_response = token_res
 		encrypted = urldecode(token_res)
-		#self.token_encrypted = encrypted[0][0]
 		d = encrypted[0][0].split(";")
-		#self.encrypt_data = d[0]
-		#self.encrypt_iv = d[1]
 		key = "fstockencryptkey".encode("utf8")
 		data = b64decode(d[0])
 		iv = b64decode(d[1])
@@ -86,9 +82,10 @@ class FSSettings(Document):
 
 @frappe.whitelist(allow_guest=True)
 def add_transfer_contribution(doc, method):
-	if doc.custom_contribution_type:
+
+	def add_transfer(integration_request=None):
 		fs_controller = frappe.get_doc("FS Settings")
-		# Add a login timeout check here
+		# Add a login timeout check here, if possible
 		login_res = fs_controller.fapi_login()
 
 		if login_res["Result"] == "OK":
@@ -97,21 +94,57 @@ def add_transfer_contribution(doc, method):
 				strAccountNumberFrom = frappe.get_value("Customer", doc.party, "custom_fs_account_number")
 				strAccountNumberTo = doc.custom_fs_account_to
 				fAmount = str(doc.paid_amount)
-				strDescription = _("{0}, Transaction ID: {1}").format(doc.custom_contribution_type, doc.name)
 				check = "Yes"
 				#with open('fapi_token8.txt', 'w') as file:
 				#	file.write(str(strAccountNumberFrom, strAccountNumberTo, fAmount, strDescription, check, transfer_token))
+
+				# Create an "Integration Request" in case of a fresh transfer
+				if not integration_request:
+					kwargs = {
+						"Payment Entry ID": doc.name,
+						"strAccountNumberFrom": strAccountNumberFrom,
+						"strAccountNumberTo": strAccountNumberTo,
+						"fAmount": fAmount,
+						"strDescription": _("{0}, Payment ID: {1}").format(doc.custom_contribution_type, doc.name),
+						"check": check,
+						"token": transfer_token
+					}
+					# Create integration log
+					integration_request = create_request_log(kwargs, service_name="FS")
+				# appending the integration_request name field as Transaction ID in strDescription
+				strDescription = _("{0}, Transaction ID: {1}").format(kwargs["strDescription"], integration_request.name)
 				addTransfer_res = fs_client.service.addTransfer(
 					strAccountNumberFrom, strAccountNumberTo, fAmount, strDescription, check, transfer_token)
 				# Explore whether to store the default FS transaction message, or request for a transaction ID..
 				doc.custom_remarks = 1
-				res = addTransfer_res["Result"]
-				doc.custom_fs_transfer_status = res
+				doc.custom_fs_transfer_status = addTransfer_res["Result"]
 				doc.remarks = addTransfer_res["Message"]
-				if res != "OK":
-					frappe.throw(res)
+				if addTransfer_res["Result"] == "OK":
+					integration_request.status = "Completed"
+					integration_request.save(ignore_permissions=True)
+					frappe.db.commit()
+				else:
+					integration_request.staus = "Failed"
+					integration_request.save(ignore_permissions=True)
+					frappe.db.commit()
+					frappe.throw(addTransfer_res["Result"])
 		else:
 			frappe.throw(login_res["Result"])
+
+	if doc.custom_contribution_type and doc.custom_fs_transfer_status and doc.custom_fs_transfer_status != "OK":
+		# fetch the existing integration request with status "Queued" - for this "Payment Entry" doc
+		integration_request_existing = frappe.get_all(
+			"Integration Request",
+			filters={"integration_request_service": "FS", "data['Payment Entry ID']": doc.name},
+			fields=["name", "data"],
+		)
+		# Add logic to pass an existing "Integration Request", if any
+		if integration_request_existing:
+			integration_request = frappe.get_doc(integration_request_existing[0])
+			add_transfer(integration_request)
+
+	elif doc.custom_contribution_type and not doc.custom_fs_transfer_status:
+		add_transfer()
 
 
 @frappe.whitelist(allow_guest=True)
