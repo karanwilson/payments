@@ -9,11 +9,9 @@
  "field_order": [
   "fs_user",
   "fs_password",
-  "fapi_url",
+  "fs_account",
   "login_status",
-  "last_login_at",
-  "token_decrypted",
-  "testing"
+  "login_at"
  ],
  "fields": [
   {
@@ -31,39 +29,29 @@
    "reqd": 1
   },
   {
-   "fieldname": "fapi_url",
-   "fieldtype": "Data",
-   "label": "FAPI URL",
-   "read_only": 1
-  },
-  {
    "fieldname": "login_status",
    "fieldtype": "Data",
    "label": "Login Status",
    "read_only": 1
   },
   {
-   "default": "0",
-   "description": "Dummy check box: creates a change in the Doc for testing the doc save hook/trigger.",
-   "fieldname": "testing",
-   "fieldtype": "Check",
-   "label": "Testing"
-  },
-  {
-   "fieldname": "last_login_at",
+   "fieldname": "login_at",
    "fieldtype": "Datetime",
-   "label": "Last Login At"
+   "label": "Login At",
+   "read_only": 1
   },
   {
-   "fieldname": "token_decrypted",
+   "description": "Recipient Account",
+   "fieldname": "fs_account",
    "fieldtype": "Data",
-   "label": "Token Decrypted"
+   "label": "FS Account",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-08-04 15:14:39.876118",
+ "modified": "2024-08-06 14:09:33.218447",
  "modified_by": "Administrator",
  "module": "Payment Gateways",
  "name": "FS Settings",

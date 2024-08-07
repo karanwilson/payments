@@ -59,6 +59,13 @@
     <wsdl:part name="return" type="tns:LoginResponse"/>
   </wsdl:message>
 
+  <wsdl:message name="LogoutRequest">
+    <wsdl:part name="request" type="xsd:string"/>
+  </wsdl:message>
+  <wsdl:message name="LogoutResponse_msg">
+    <wsdl:part name="return" type="xsd:string"/>
+  </wsdl:message>
+
   <wsdl:message name="Response_msg">
     <wsdl:part name="return" type="tns:Response"/>
   </wsdl:message>
@@ -101,6 +108,11 @@
       <wsdl:output message="tns:LoginResponse_msg"/>
     </wsdl:operation>
 
+    <wsdl:operation name="logout">
+      <wsdl:input message="tns:LogoutRequest"/>
+      <wsdl:output message="tns:LogoutResponse_msg"/>
+    </wsdl:operation>
+
     <wsdl:operation name="requestTransferToken">
       <wsdl:input message="tns:TokenRequest_msg"/>
       <wsdl:output message="tns:TokenResponse_msg"/>
@@ -128,6 +140,16 @@
 
     <wsdl:operation name="login">
       <soap:operation soapAction="urn:assets/payments/FS/login" style="rpc"/>
+      <wsdl:input>
+        <soap:body use="encoded"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="encoded"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="logout">
+      <soap:operation soapAction="urn:assets/payments/FS/logout" style="rpc"/>
       <wsdl:input>
         <soap:body use="encoded"/>
       </wsdl:input>
