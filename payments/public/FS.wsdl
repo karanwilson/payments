@@ -43,6 +43,13 @@
               <xsd:element name="Message" type="xsd:string"/>
             </xsd:sequence>
           </xsd:complexType>
+
+          <xsd:complexType name="MaxAmountResponse">
+            <xsd:sequence>
+              <xsd:element name="Result" type="xsd:string"/>
+              <xsd:element name="maxAmount" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:complexType>
     </xsd:schema>
   </wsdl:types>
 
@@ -90,6 +97,14 @@
     <wsdl:part name="return" type="tns:TransferResponse"/>
   </wsdl:message>
 
+  <wsdl:message name="getMaxAmountRequest">
+    <wsdl:part name="strAccountNumberFrom" type="xsd:string"/>
+  </wsdl:message>
+
+  <wsdl:message name="getMaxAmountResponse">
+    <wsdl:part name="return" type="tns:MaxAmountResponse"/>
+  </wsdl:message>
+
   <wsdl:message name="testTransferRequest">
     <wsdl:part name="strAccountNumberFrom" type="xsd:string"/>
     <wsdl:part name="strAccountNumberTo" type="xsd:string"/>
@@ -121,6 +136,11 @@
     <wsdl:operation name="addTransfer">
       <wsdl:input message="tns:addTransferRequest"/>
       <wsdl:output message="tns:addTransferResponse"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="getAccountMaxAmount">
+      <wsdl:input message="tns:getMaxAmountRequest"/>
+      <wsdl:output message="tns:getMaxAmountResponse"/>
     </wsdl:operation>
 
     <wsdl:operation name="testTransfer">
@@ -170,6 +190,16 @@
 
     <wsdl:operation name="addTransfer">
       <soap:operation soapAction="urn:assets/payments/FS/addTransfer" style="rpc"/>
+      <wsdl:input>
+        <soap:body use="encoded"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="encoded"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="getAccountMaxAmount">
+      <soap:operation soapAction="urn:assets/payments/FS/getAccountMaxAmount" style="rpc"/>
       <wsdl:input>
         <soap:body use="encoded"/>
       </wsdl:input>

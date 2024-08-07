@@ -97,6 +97,23 @@ def logout():
 
 
 @frappe.whitelist(allow_guest=True)
+def get_account_max_amount(fs_acc_customer):
+	fs_account_number = frappe.get_value("Customer", fs_acc_customer, "custom_fs_account_number")
+
+	if fs_account_number:
+		fs_controller = frappe.get_doc("FS Settings")
+		login_res = fs_controller.fapi_login()
+
+		if login_res["Result"] == "OK":
+			accountMaxAmount_res = fs_controller.fs_client.service.getAccountMaxAmount(fs_account_number)
+			response = {
+				"Result": accountMaxAmount_res["Result"],
+				"maxAmount": accountMaxAmount_res["maxAmount"]
+			}
+			return response
+
+
+@frappe.whitelist(allow_guest=True)
 def add_transfer_contribution(doc, method):
 	# check if the Payment Entry is for PTDC Contibutions - the function doesn't run in case of returns and other Payment Entries
 	# the function also doesn't run in case a FS Transfer Status has value "OK"
