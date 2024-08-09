@@ -188,7 +188,7 @@ def add_transfer_contribution(doc, method):
 					integration_request.save(ignore_permissions=True)
 					frappe.db.commit()
 				else:
-					integration_request.staus = "Failed"
+					integration_request.status = "Failed"
 					integration_request.save(ignore_permissions=True)
 					frappe.db.commit()
 					frappe.throw(addTransfer_res["Result"])
@@ -202,7 +202,6 @@ def add_transfer_contribution(doc, method):
 @frappe.whitelist(allow_guest=True)
 def add_transfer_billing(invoice_doc, fAmount):
 	invoice_dict = json.loads(invoice_doc)
-	#frappe.throw(invoice_dict["custom_fs_transfer_status"])
 
 	fs_controller = frappe.get_doc("FS Settings")
 	login_res = fs_controller.fapi_login()
@@ -211,7 +210,18 @@ def add_transfer_billing(invoice_doc, fAmount):
 		transfer_token = fs_controller.request_transfer_token()
 
 		if (transfer_token):
-			strAccountNumberFrom = frappe.get_value("Customer", invoice_dict["customer"], "custom_fs_account_number")
+			fAmount_float = float(fAmount) # converting to float in order to do check for negative amounts below
+			if fAmount_float > 0:
+				strAccountNumberFrom = frappe.get_value("Customer", invoice_dict["customer"], "custom_fs_account_number")
+				strAccountNumberTo = fs_controller.fs_account
+
+			else:
+				# in case of returns, the amount will be a negative value,
+				# hence convert it to postive, and swap the from/to FS account numbers, to make a return transfer
+				fAmount = abs(fAmount_float)
+				#frappe.throw(str(fAmount))
+				strAccountNumberFrom = fs_controller.fs_account
+				strAccountNumberTo = frappe.get_value("Customer", invoice_dict["customer"], "custom_fs_account_number")
 
 			payment_dict = {
 				'reference_doctype': "Customer",
@@ -219,7 +229,7 @@ def add_transfer_billing(invoice_doc, fAmount):
 				"Payment Name": invoice_dict["doctype"],
 				"Payment ID": invoice_dict["name"],
 				"strAccountNumberFrom": strAccountNumberFrom,
-				"strAccountNumberTo": fs_controller.fs_account,
+				"strAccountNumberTo": strAccountNumberTo,
 				"fAmount": str(fAmount),
 				# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
 				# string[0:5] extracts the first 4 chars of the string
@@ -276,7 +286,7 @@ def add_transfer_billing(invoice_doc, fAmount):
 				return response
 
 			else:
-				integration_request.staus = "Failed"
+				integration_request.status = "Failed"
 				integration_request.save(ignore_permissions=True)
 				frappe.db.commit()
 				return response
