@@ -226,7 +226,8 @@
    -->
   <wsdl:service name="FS">
     <wsdl:port binding="tns:FS_SoapBinding" name="FS_port">
-      <soap:address location="http://container-sandbox.financialservice.org.in:8812/server3.php"/>
+      <soap:address location="https://api3-staging.financialservice.org.in/server3.php"/>
+      <!--soap:address location="http://container-sandbox.financialservice.org.in:8812/server3.php"/-->
     </wsdl:port>
   </wsdl:service>
 </wsdl:definitions>
