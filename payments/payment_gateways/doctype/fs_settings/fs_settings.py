@@ -320,15 +320,15 @@ def add_transfer_draft_fs_bills():
 				transfer_token = fs_controller.request_transfer_token()
 
 				if transfer_token:
-					strAccountNumberTo = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
+					strAccountNumberFrom = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
 
 					payment_dict = {
 						'reference_doctype': "Customer",
 						'reference_docname': invoice_doc.customer,
 						"Payment Name": invoice_doc.doctype,
 						"Payment ID": invoice_doc.name,
-						"strAccountNumberFrom": fs_controller.fs_account,
-						"strAccountNumberTo": strAccountNumberTo,
+						"strAccountNumberFrom": strAccountNumberFrom,
+						"strAccountNumberTo": fs_controller.fs_account,
 						"fAmount": str(invoice_doc.total),
 						# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
 						# string[0:5] extracts the first 4 chars of the string
