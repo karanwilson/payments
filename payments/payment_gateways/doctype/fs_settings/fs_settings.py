@@ -380,6 +380,8 @@ def add_transfer_draft_fs_bills():
 						frappe.db.commit()
 						invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
 						invoice_doc.remarks = addTransfer_res["Message"]
+						invoice_doc.save()
+						invoice_doc.submit()
 						#return response
 
 					else:
@@ -388,6 +390,7 @@ def add_transfer_draft_fs_bills():
 						frappe.db.commit()
 						invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
 						invoice_doc.remarks = addTransfer_res["Message"]
+						invoice_doc.save()
 						frappe.throw(addTransfer_res["Result"])
 						#return response
 
