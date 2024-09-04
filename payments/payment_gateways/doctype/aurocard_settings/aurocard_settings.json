@@ -38,18 +38,20 @@
   {
    "fieldname": "login_status",
    "fieldtype": "Data",
-   "label": "Login Status"
+   "label": "Login Status",
+   "read_only": 1
   },
   {
    "fieldname": "login_at",
    "fieldtype": "Datetime",
-   "label": "Login At"
+   "label": "Login At",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-09-03 12:32:44.628670",
+ "modified": "2024-09-04 18:21:18.782373",
  "modified_by": "Administrator",
  "module": "Payment Gateways",
  "name": "Aurocard Settings",

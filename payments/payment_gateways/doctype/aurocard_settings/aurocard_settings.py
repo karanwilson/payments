@@ -23,9 +23,9 @@ class AurocardSettings(Document):
 		create_payment_gateway("Aurocard")
 		call_hook_method("payment_gateway_enabled", gateway="Aurocard")
 		if not self.flags.ignore_mandatory:
-			self.validate_fs_credentials()
+			self.validate_aurocard_credentials()
 
-	def	validate_fs_credentials(self):
+	def	validate_aurocard_credentials(self):
 		pass
 
 	def	validate_transaction_currency(self, currency):
