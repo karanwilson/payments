@@ -1,0 +1,73 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-09-03 12:32:44.628670",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "aurocard_user",
+  "aurocard_password",
+  "aurocard_account",
+  "login_status",
+  "login_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "aurocard_user",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Aurocard User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "aurocard_password",
+   "fieldtype": "Password",
+   "in_list_view": 1,
+   "label": "Aurocard Password",
+   "reqd": 1
+  },
+  {
+   "fieldname": "aurocard_account",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Aurocard Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "login_status",
+   "fieldtype": "Data",
+   "label": "Login Status"
+  },
+  {
+   "fieldname": "login_at",
+   "fieldtype": "Datetime",
+   "label": "Login At"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2024-09-03 12:32:44.628670",
+ "modified_by": "Administrator",
+ "module": "Payment Gateways",
+ "name": "Aurocard Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

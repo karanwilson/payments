@@ -15,6 +15,7 @@ from oauthlib.common import urldecode
 from Crypto.Cipher import AES
 from datetime import datetime
 
+
 class FSSettings(Document):
 	supported_currencies = ["INR"]
 	# Initialise the SOAP client
@@ -300,6 +301,7 @@ def add_transfer_billing(invoice_doc, fAmount):
 
 @frappe.whitelist(allow_guest=True)
 def add_transfer_draft_fs_bills():
+	# for Offline FS bills
 	draft_fs_bills = frappe.get_all(
 		"Sales Invoice",
 		{
@@ -320,7 +322,18 @@ def add_transfer_draft_fs_bills():
 				transfer_token = fs_controller.request_transfer_token()
 
 				if transfer_token:
-					strAccountNumberFrom = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
+					fAmount = invoice_doc.total
+					if fAmount > 0:
+						strAccountNumberFrom = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
+						strAccountNumberTo = fs_controller.fs_account
+
+					else:
+						# in case of returns, the amount will be a negative value,
+						# hence convert it to postive, and swap the from/to FS account numbers, to make a return transfer
+						fAmount = abs(fAmount)
+						#frappe.throw(str(fAmount))
+						strAccountNumberFrom = fs_controller.fs_account
+						strAccountNumberTo = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
 
 					payment_dict = {
 						'reference_doctype': "Customer",
@@ -328,8 +341,8 @@ def add_transfer_draft_fs_bills():
 						"Payment Name": invoice_doc.doctype,
 						"Payment ID": invoice_doc.name,
 						"strAccountNumberFrom": strAccountNumberFrom,
-						"strAccountNumberTo": fs_controller.fs_account,
-						"fAmount": str(invoice_doc.total),
+						"strAccountNumberTo": strAccountNumberTo,
+						"fAmount": str(fAmount),
 						# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
 						# string[0:5] extracts the first 4 chars of the string
 						"strDescription": _("PT-POS-Invoice/{0}").format(invoice_doc.name),
