@@ -90,7 +90,7 @@
     <wsdl:part name="fAmount" type="xsd:string"/>
     <wsdl:part name="strDescription" type="xsd:string"/>
     <wsdl:part name="check" type="xsd:string"/>
-    <wsdl:part name="token" type="xsd:string"/>
+    <wsdl:part name="token" type="xsd:integer"/>
   </wsdl:message>
 
   <wsdl:message name="addTransferResponse">

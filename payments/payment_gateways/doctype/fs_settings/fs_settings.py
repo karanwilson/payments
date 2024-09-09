@@ -68,13 +68,19 @@ class FSSettings(Document):
 		This can catch you out, as print() will of course not show the NUL chars. 
 		My solution that I used was to clean the string using ".strip().strip('\x00')
 		"""
-		self.token_decrypted = transfer_token
-		#with open('fapi_token5.txt', 'w') as file:
-		#	file.write(str(transfer_token))
+		#self.token_decrypted = transfer_token
+		
+		#token_int = int(transfer_token)
+		#token_type = type(token_int)
+		#with open('fapi_token9.txt', 'w') as file:
+		#	file.write(str(token_type))
 		#with open('fapi_token2.txt', 'w') as fp:
 		#	fp.write('\n'.join('%s %s' % x for x in transfer_token))
+		#frappe.throw(str(token_int))
 
-		return transfer_token
+		return int(transfer_token)
+		# As per the new FAPI SOAP call to requestTransferToken, the transfer_token is required to be an integer.
+
 
 	def	validate_transaction_currency(self, currency):
 		if currency not in self.supported_currencies:
