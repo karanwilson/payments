@@ -119,6 +119,9 @@ def get_account_max_amount(fs_acc_customer):
 			}
 			return response
 
+		else:
+			return login_res["Result"]
+
 
 @frappe.whitelist(allow_guest=True)
 def add_transfer_contribution(doc, method):
@@ -333,6 +336,20 @@ def add_transfer_draft_fs_bills():
 						strAccountNumberFrom = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
 						strAccountNumberTo = fs_controller.fs_account
 
+						accountMaxAmount_res = fs_controller.fs_client.service.getAccountMaxAmount(strAccountNumberFrom)
+						#with open('accountMaxAmount_res.txt', 'w') as file:
+						#	file.write(str(accountMaxAmount_res["maxAmount"]))
+						#frappe.throw(str(accountMaxAmount_res["maxAmount"]))
+						if accountMaxAmount_res["Result"] == "OK":
+							if float(accountMaxAmount_res["maxAmount"]) < fAmount:
+								#balance_available = True
+							#else:
+								invoice_doc.custom_fs_transfer_status = "Insufficient Funds"
+								invoice_doc.save()
+								continue
+						else:
+							frappe.throw(accountMaxAmount_res["Result"])
+
 					else:
 						# in case of returns, the amount will be a negative value,
 						# hence convert it to postive, and swap the from/to FS account numbers, to make a return transfer
@@ -388,11 +405,6 @@ def add_transfer_draft_fs_bills():
 						payment_dict["token"]
 					)
 
-					#response = {
-					#	"custom_fs_transfer_status": addTransfer_res["Result"],
-					#	"remarks": addTransfer_res["Message"]
-					#}
-
 					if addTransfer_res["Result"] == "OK":
 						integration_request.status = "Completed"
 						integration_request.save(ignore_permissions=True)
@@ -401,7 +413,6 @@ def add_transfer_draft_fs_bills():
 						invoice_doc.remarks = addTransfer_res["Message"]
 						invoice_doc.save()
 						invoice_doc.submit()
-						#return response
 
 					else:
 						integration_request.status = "Failed"
@@ -410,8 +421,7 @@ def add_transfer_draft_fs_bills():
 						invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
 						invoice_doc.remarks = addTransfer_res["Message"]
 						invoice_doc.save()
-						frappe.throw(addTransfer_res["Result"])
-						#return response
+						#frappe.throw(addTransfer_res["Result"])
 
 				else:
 					frappe.throw("FS transfer token not received")
