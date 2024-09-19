@@ -311,13 +311,13 @@ def add_transfer_billing(invoice_doc, fAmount):
 @frappe.whitelist(allow_guest=True)
 def add_transfer_draft_fs_bills():
 	# for Offline FS bills
-	draft_fs_bills = frappe.get_all(
-		"Sales Invoice",
-		{
-			"status": "Draft",
-			"custom_fs_transfer_status": "PENDING"
-		},
-		pluck='name'
+	draft_fs_bills = frappe.db.sql(
+		"""
+		SELECT name
+		FROM `tabSales Invoice`
+		WHERE docstatus = 0 AND NOT custom_fs_transfer_status = "OK" AND custom_fs_transfer_status IS NOT NULL
+		""",
+		as_dict=1,
 	)
 
 	if draft_fs_bills:
