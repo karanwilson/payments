@@ -328,35 +328,31 @@ def add_transfer_draft_fs_bills():
 
 			login_res = fs_controller.fapi_login()
 			if login_res["Result"] == "OK":
-				transfer_token = fs_controller.request_transfer_token()
 
-				if transfer_token:
-					fAmount = invoice_doc.total
-					if fAmount > 0:
-						strAccountNumberFrom = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
-						strAccountNumberTo = fs_controller.fs_account
+				fAmount = invoice_doc.total
+				if fAmount > 0:
+					strAccountNumberFrom = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
+					strAccountNumberTo = fs_controller.fs_account
 
-						accountMaxAmount_res = fs_controller.fs_client.service.getAccountMaxAmount(strAccountNumberFrom)
-						#with open('accountMaxAmount_res.txt', 'w') as file:
-						#	file.write(str(accountMaxAmount_res["maxAmount"]))
-						#frappe.throw(str(accountMaxAmount_res["maxAmount"]))
-						if accountMaxAmount_res["Result"] == "OK":
-							if float(accountMaxAmount_res["maxAmount"]) < fAmount:
-								#balance_available = True
-							#else:
-								invoice_doc.custom_fs_transfer_status = "Insufficient Funds"
-								invoice_doc.save()
-								continue
-						else:
-							frappe.throw(accountMaxAmount_res["Result"])
-
+					accountMaxAmount_res = fs_controller.fs_client.service.getAccountMaxAmount(strAccountNumberFrom)
+					if accountMaxAmount_res["Result"] == "OK":
+						if float(accountMaxAmount_res["maxAmount"]) < fAmount:
+							invoice_doc.custom_fs_transfer_status = "Insufficient Funds"
+							invoice_doc.save()
+							continue
 					else:
-						# in case of returns, the amount will be a negative value,
-						# hence convert it to postive, and swap the from/to FS account numbers, to make a return transfer
-						fAmount = abs(fAmount)
-						#frappe.throw(str(fAmount))
-						strAccountNumberFrom = fs_controller.fs_account
-						strAccountNumberTo = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
+						frappe.throw(accountMaxAmount_res["Result"])
+
+				else:
+					# in case of returns, the amount will be a negative value,
+					# hence convert it to postive, and swap the from/to FS account numbers, to make a return transfer
+					fAmount = abs(fAmount)
+					#frappe.throw(str(fAmount))
+					strAccountNumberFrom = fs_controller.fs_account
+					strAccountNumberTo = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
+
+				transfer_token = fs_controller.request_transfer_token()
+				if transfer_token:
 
 					payment_dict = {
 						'reference_doctype': "Customer",
