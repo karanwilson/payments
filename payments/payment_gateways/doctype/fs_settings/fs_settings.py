@@ -430,7 +430,7 @@ def add_transfer_draft_fs_bills():
 def pending_fs_bills_query(customer):
 	return frappe.db.sql(
 		"""
-		SELECT COUNT(name) as pending_bills
+		SELECT COUNT(name) as pending_fs_bills
 		FROM `tabSales Invoice`
 		WHERE customer = %s AND docstatus = 0
 		AND NOT custom_fs_transfer_status = "OK" AND custom_fs_transfer_status IS NOT NULL
