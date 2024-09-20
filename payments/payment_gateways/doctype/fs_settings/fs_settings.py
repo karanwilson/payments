@@ -424,3 +424,17 @@ def add_transfer_draft_fs_bills():
 
 			else:
 				frappe.throw(login_res["Result"])
+
+
+@frappe.whitelist(allow_guest=True)
+def pending_fs_bills_query(customer):
+	return frappe.db.sql(
+		"""
+		SELECT COUNT(name) as pending_bills
+		FROM `tabSales Invoice`
+		WHERE customer = %s AND docstatus = 0
+		AND NOT custom_fs_transfer_status = "OK" AND custom_fs_transfer_status IS NOT NULL
+		""",
+		customer,
+		as_dict=1,
+	)
