@@ -405,8 +405,13 @@ def add_transfer_draft_fs_bills():
 						integration_request.status = "Completed"
 						integration_request.save(ignore_permissions=True)
 						frappe.db.commit()
+
+						invoice_doc.payments[0].mode_of_payment = "FS"
+						invoice_doc.payments[0].amount = fAmount
+						invoice_doc.paid_amount = fAmount
 						invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
 						invoice_doc.remarks = addTransfer_res["Message"]
+
 						invoice_doc.save()
 						invoice_doc.submit()
 
@@ -432,8 +437,8 @@ def pending_fs_bills_query(customer):
 		"""
 		SELECT COUNT(name) as pending_fs_bills
 		FROM `tabSales Invoice`
-		WHERE customer = %s AND docstatus = 0
-		AND NOT custom_fs_transfer_status = "OK" AND custom_fs_transfer_status IS NOT NULL
+		WHERE customer = %s
+		AND NOT status = "Paid" AND NOT status = "Return" AND NOT status = "Credit Note Issued"
 		""",
 		customer,
 		as_dict=1,
