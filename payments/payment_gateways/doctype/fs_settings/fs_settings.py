@@ -338,7 +338,10 @@ def add_transfer_draft_fs_bills():
 					if accountMaxAmount_res["Result"] == "OK":
 						if float(accountMaxAmount_res["maxAmount"]) < fAmount:
 							invoice_doc.custom_fs_transfer_status = "Insufficient Funds"
+							invoice_doc.outstanding_amount = fAmount # for "Credit Sale"
+
 							invoice_doc.save()
+							invoice_doc.submit()
 							continue
 					else:
 						frappe.throw(accountMaxAmount_res["Result"])
