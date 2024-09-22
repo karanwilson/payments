@@ -432,14 +432,19 @@ def add_transfer_draft_fs_bills():
 
 
 @frappe.whitelist(allow_guest=True)
-def pending_fs_bills_query(customer):
+def pending_fs_bills_query(customer, company):
+	values = {
+		"customer": customer,
+		"company": company
+	}
+
 	return frappe.db.sql(
 		"""
 		SELECT COUNT(name) as pending_fs_bills
 		FROM `tabSales Invoice`
-		WHERE customer = %s
+		WHERE customer = %(customer)s AND company = %(company)s
 		AND NOT status = "Paid" AND NOT status = "Return" AND NOT status = "Credit Note Issued"
 		""",
-		customer,
+		values=values,
 		as_dict=1,
 	)
