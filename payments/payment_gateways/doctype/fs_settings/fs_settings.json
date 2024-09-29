@@ -10,6 +10,7 @@
   "fs_user",
   "fs_password",
   "fs_account",
+  "production",
   "login_status",
   "login_at"
  ],
@@ -46,12 +47,19 @@
    "fieldtype": "Data",
    "label": "FS Account",
    "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "production",
+   "fieldtype": "Check",
+   "label": "Production",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-08-06 14:09:33.218447",
+ "modified": "2024-09-29 18:36:46.675184",
  "modified_by": "Administrator",
  "module": "Payment Gateways",
  "name": "FS Settings",
