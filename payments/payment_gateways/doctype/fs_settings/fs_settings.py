@@ -41,6 +41,7 @@ class FSSettings(Document):
 		strPassword = self.get_password(fieldname="fs_password", raise_exception=False)
 
 		login_res = self.fs_client.service.login(strPID, strPassword)
+		#frappe.throw(str(login_res["ExtraInfo"]))
 		return login_res
 
 	def fapi_logout(self):
