@@ -20,6 +20,8 @@ class FSSettings(Document):
 	supported_currencies = ["INR"]
 	# Initialise the SOAP client
 	fs_client = Client("assets/payments/FS.wsdl")
+	production_service = fs_client.create_service("{urn:assets/payments/FS}FS_SoapBinding", "https://api3.avfs.org.in/server3.php")
+	staging_service = fs_client.create_service("{urn:assets/payments/FS}FS_SoapBinding", "http://container-sandbox.financialservice.org.in:8812/server3.php")
 
 	def	validate(self):
 		create_payment_gateway("FS")
@@ -40,8 +42,11 @@ class FSSettings(Document):
 		strPID = self.fs_user
 		strPassword = self.get_password(fieldname="fs_password", raise_exception=False)
 
-		login_res = self.fs_client.service.login(strPID, strPassword)
-		return login_res
+		if self.production:
+			return self.production_service.login(strPID, strPassword)
+			#return login_res
+		else:
+			return self.staging_service.login(strPID, strPassword)
 
 	def fapi_logout(self):
 		request = ""
@@ -50,7 +55,11 @@ class FSSettings(Document):
 
 	def request_transfer_token(self):
 		request = {"transferToken":""}
-		token_res = self.fs_client.service.requestTransferToken(request)
+		if self.production:
+			token_res = self.production_service.requestTransferToken(request)
+		else:
+			token_res = self.staging_service.requestTransferToken(request)
+
 		encrypted = urldecode(token_res)
 		d = encrypted[0][0].split(";")
 		key = "fstockencryptkey".encode("utf8")
@@ -112,7 +121,10 @@ def get_account_max_amount(fs_acc_customer):
 		login_res = fs_controller.fapi_login()
 
 		if login_res["Result"] == "OK":
-			accountMaxAmount_res = fs_controller.fs_client.service.getAccountMaxAmount(fs_account_number)
+			if fs_controller.production:
+				accountMaxAmount_res = fs_controller.production_service.getAccountMaxAmount(fs_account_number)
+			else:
+				accountMaxAmount_res = fs_controller.staging_service.getAccountMaxAmount(fs_account_number)
 			response = {
 				"Result": accountMaxAmount_res["Result"],
 				"maxAmount": accountMaxAmount_res["maxAmount"]
