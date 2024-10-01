@@ -45,7 +45,6 @@ class FSSettings(Document):
 		if self.production:
 			return self.production_service.login(strPID, strPassword)
 			#frappe.throw(str(login_res["ExtraInfo"]))
-			#return login_res
 		else:
 			return self.staging_service.login(strPID, strPassword)
 
@@ -192,7 +191,12 @@ def add_transfer_contribution(doc, method):
 				# appending the integration_request name field as Transaction ID in strDescription
 				payment_dict["strDescription"] = _("{0}/{1}").format(payment_dict["strDescription"], integration_request.name)
 
-				addTransfer_res = fs_controller.fs_client.service.addTransfer(
+				if fs_controller.production:
+					fs_service_proxy = fs_controller.production_service
+				else:
+					fs_service_proxy = fs_controller.staging_service
+
+				addTransfer_res = fs_service_proxy.addTransfer(
 					payment_dict["strAccountNumberFrom"],
 					payment_dict["strAccountNumberTo"],
 					payment_dict["fAmount"],
@@ -287,7 +291,12 @@ def add_transfer_billing(invoice_doc, fAmount):
 			# appending the integration_request name field as Transaction ID in strDescription
 			payment_dict["strDescription"] = _("{0}/{1}").format(payment_dict["strDescription"], integration_request.name)
 
-			addTransfer_res = fs_controller.fs_client.service.addTransfer(
+			if fs_controller.production:
+				fs_service_proxy = fs_controller.production_service
+			else:
+				fs_service_proxy = fs_controller.staging_service
+
+			addTransfer_res = fs_service_proxy.addTransfer(
 				payment_dict["strAccountNumberFrom"],
 				payment_dict["strAccountNumberTo"],
 				payment_dict["fAmount"],
@@ -341,13 +350,17 @@ def add_transfer_draft_fs_bills():
 
 			login_res = fs_controller.fapi_login()
 			if login_res["Result"] == "OK":
+				if fs_controller.production:
+					fs_service_proxy = fs_controller.production_service
+				else:
+					fs_service_proxy = fs_controller.staging_service
 
 				fAmount = invoice_doc.total
 				if fAmount > 0:
 					strAccountNumberFrom = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
 					strAccountNumberTo = fs_controller.fs_account
 
-					accountMaxAmount_res = fs_controller.fs_client.service.getAccountMaxAmount(strAccountNumberFrom)
+					accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(strAccountNumberFrom)
 					if accountMaxAmount_res["Result"] == "OK":
 						if float(accountMaxAmount_res["maxAmount"]) < fAmount:
 							invoice_doc.custom_fs_transfer_status = "Insufficient Funds"
@@ -408,7 +421,7 @@ def add_transfer_draft_fs_bills():
 					# appending the integration_request name field as Transaction ID in strDescription
 					payment_dict["strDescription"] = _("{0}/{1}").format(payment_dict["strDescription"], integration_request.name)
 
-					addTransfer_res = fs_controller.fs_client.service.addTransfer(
+					addTransfer_res = fs_service_proxy.addTransfer(
 						payment_dict["strAccountNumberFrom"],
 						payment_dict["strAccountNumberTo"],
 						payment_dict["fAmount"],
@@ -458,7 +471,7 @@ def pending_fs_bills_query(customer, company):
 		"""
 		SELECT COUNT(name) as pending_fs_bills
 		FROM `tabSales Invoice`
-		WHERE customer = %(customer)s AND company = %(company)s
+		WHERE customer = %(customer)s AND company = %(company)s AND NOT docstatus = 2
 		AND NOT status = "Paid" AND NOT status = "Return" AND NOT status = "Credit Note Issued"
 		""",
 		values=values,
