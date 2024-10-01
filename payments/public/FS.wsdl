@@ -22,6 +22,7 @@
             <xsd:sequence>
               <xsd:element name="Result" type="xsd:string"/>
               <xsd:element name="ValidAccounts" type="xsd:string" minOccurs="0" maxOccurs="unbounded"/>
+              <xsd:element name="ExtraInfo" type="xsd:string"/>
             </xsd:sequence>
           </xsd:complexType>
 

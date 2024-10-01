@@ -44,6 +44,7 @@ class FSSettings(Document):
 
 		if self.production:
 			return self.production_service.login(strPID, strPassword)
+			#frappe.throw(str(login_res["ExtraInfo"]))
 			#return login_res
 		else:
 			return self.staging_service.login(strPID, strPassword)
