@@ -52,14 +52,13 @@
    "default": "0",
    "fieldname": "production",
    "fieldtype": "Check",
-   "label": "Production",
-   "read_only": 1
+   "label": "Production"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-09-29 18:36:46.675184",
+ "modified": "2024-10-01 17:31:14.919086",
  "modified_by": "Administrator",
  "module": "Payment Gateways",
  "name": "FS Settings",

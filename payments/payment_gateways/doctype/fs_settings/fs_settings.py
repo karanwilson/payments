@@ -21,7 +21,7 @@ class FSSettings(Document):
 	# Initialise the SOAP client
 	fs_client = Client("assets/payments/FS.wsdl")
 	production_service = fs_client.create_service("{urn:assets/payments/FS}FS_SoapBinding", "https://api3.avfs.org.in/server3.php")
-	staging_service = fs_client.create_service("{urn:assets/payments/FS}FS_SoapBinding", "http://container-sandbox.financialservice.org.in:8812/server3.php")
+	staging_service = fs_client.create_service("{urn:assets/payments/FS}FS_SoapBinding", "https://api3-staging.financialservice.org.in/server3.php")
 
 	def	validate(self):
 		create_payment_gateway("FS")
