@@ -13,7 +13,7 @@ from zeep import Client #, Settings
 from base64 import b64decode
 from oauthlib.common import urldecode
 from Crypto.Cipher import AES
-from datetime import datetime
+import datetime
 
 
 class FSSettings(Document):
@@ -394,6 +394,116 @@ def add_transfer_draft_fs_bills():
 						# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
 						# string[0:5] extracts the first 4 chars of the string
 						"strDescription": _("PT-POS-Invoice/{0}").format(invoice_doc.name),
+						"check": "Yes",
+						"token": transfer_token
+					}
+
+					integration_request = None
+
+					# if exists, fetch the existing integration request for this "Payment Entry" doc
+					for integration_request_existing in frappe.get_all(
+						"Integration Request",
+						filters={"status": "Queued", "integration_request_service": "FS", },
+						fields=["name", "data"],
+					):
+						data = json.loads(integration_request_existing.data)
+						if data["Payment ID"] == invoice_doc.name :
+							integration_request = frappe.get_doc("Integration Request", integration_request_existing)
+							#payment_dict_json = frappe.as_json(payment_dict, indent=1)
+							#frappe.db.set_value("Integration Request", integration_request_existing.name, "data", payment_dict_json)
+							break
+
+					# Create an "Integration Request" in case of a fresh transfer
+					if not integration_request:
+						# Create integration log
+						integration_request = create_request_log(payment_dict, service_name="FS")
+
+					# appending the integration_request name field as Transaction ID in strDescription
+					payment_dict["strDescription"] = _("{0}/{1}").format(payment_dict["strDescription"], integration_request.name)
+
+					addTransfer_res = fs_service_proxy.addTransfer(
+						payment_dict["strAccountNumberFrom"],
+						payment_dict["strAccountNumberTo"],
+						payment_dict["fAmount"],
+						payment_dict["strDescription"],
+						payment_dict["check"],
+						payment_dict["token"]
+					)
+
+					if addTransfer_res["Result"] == "OK":
+						integration_request.status = "Completed"
+						integration_request.save(ignore_permissions=True)
+						frappe.db.commit()
+
+						invoice_doc.payments[0].mode_of_payment = "FS"
+						invoice_doc.payments[0].amount = fAmount
+						invoice_doc.paid_amount = fAmount
+						invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
+						invoice_doc.remarks = addTransfer_res["Message"]
+
+						invoice_doc.save()
+						invoice_doc.submit()
+
+					else:
+						integration_request.status = "Failed"
+						integration_request.save(ignore_permissions=True)
+						frappe.db.commit()
+						invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
+						invoice_doc.remarks = addTransfer_res["Message"]
+						invoice_doc.save()
+						#frappe.throw(addTransfer_res["Result"])
+
+				else:
+					frappe.throw("FS transfer token not received")
+
+			else:
+				frappe.throw(login_res["Result"])
+
+
+def add_transfer_pending_fs_bills():
+	pending_fs_bills = frappe.db.sql(
+    	"""
+        SELECT name
+        FROM `tabSales Invoice`
+        WHERE docstatus = 1 AND (status = "Unpaid" OR status = "Partly Paid")
+		AND custom_fs_transfer_status = "Insufficient Funds"
+	    """,
+        as_dict=1,
+    )
+	
+	if pending_fs_bills:
+		fs_controller = frappe.get_doc("FS Settings")
+
+		for bill in pending_fs_bills:
+			invoice_doc = frappe.get_doc("Sales Invoice", bill)
+
+			login_res = fs_controller.fapi_login()
+			if login_res["Result"] == "OK":
+				if fs_controller.production:
+					fs_service_proxy = fs_controller.production_service
+				else:
+					fs_service_proxy = fs_controller.staging_service
+
+				fAmount = invoice_doc.outstanding_amount
+
+				strAccountNumberFrom = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
+				strAccountNumberTo = fs_controller.fs_account
+
+				transfer_token = fs_controller.request_transfer_token()
+
+				if transfer_token:
+					billCreationDate = invoice_doc.creation.date()
+					payment_dict = {
+						'reference_doctype': "Customer",
+						'reference_docname': invoice_doc.customer,
+						"Payment Name": invoice_doc.doctype,
+						"Payment ID": invoice_doc.name,
+						"strAccountNumberFrom": strAccountNumberFrom,
+						"strAccountNumberTo": strAccountNumberTo,
+						"fAmount": str(fAmount),
+						# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
+						# string[0:5] extracts the first 4 chars of the string
+						"strDescription": _("PT-{0}/{1}").format(billCreationDate, invoice_doc.name),
 						"check": "Yes",
 						"token": transfer_token
 					}
