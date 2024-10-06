@@ -595,20 +595,20 @@ def add_transfer_fs_credit_bills():
 				frappe.throw(login_res["Result"])
 
 
-@frappe.whitelist(allow_guest=True)
-def pending_fs_bills_query(customer, company):
-	values = {
-		"customer": customer,
-		"company": company
-	}
-
-	return frappe.db.sql(
-		"""
-		SELECT COUNT(name) as pending_fs_bills
-		FROM `tabSales Invoice`
-		WHERE customer = %(customer)s AND company = %(company)s AND NOT docstatus = 2
-		AND NOT status = "Paid" AND NOT status = "Return" AND NOT status = "Credit Note Issued"
-		""",
-		values=values,
-		as_dict=1,
-	)
+#@frappe.whitelist(allow_guest=True)
+#def pending_fs_bills_query(customer, company):
+#	values = {
+#		"customer": customer,
+#		"company": company
+#	}
+#
+#	return frappe.db.sql(
+#		"""
+#		SELECT COUNT(name) as pending_fs_bills
+#		FROM `tabSales Invoice`
+#		WHERE customer = %(customer)s AND company = %(company)s AND NOT docstatus = 2
+#		AND NOT status = "Paid" AND NOT status = "Return" AND NOT status = "Credit Note Issued"
+#		""",
+#		values=values,
+#		as_dict=1,
+#	)
