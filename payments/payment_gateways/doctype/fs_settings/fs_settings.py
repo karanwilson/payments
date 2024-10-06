@@ -250,6 +250,15 @@ def add_transfer_billing(invoice_doc, fAmount):
 				strAccountNumberFrom = fs_controller.fs_account
 				strAccountNumberTo = frappe.get_value("Customer", invoice_dict["customer"], "custom_fs_account_number")
 
+			billCreationDate = invoice_dict["creation"][0:10] # string[0:10] extracts the first 10 chars (date) from the datetime string
+			match frappe.defaults.get_defaults().company:
+				case "Pour Tous Canteen":
+					strDescription = _("PTC/{0}/{1}").format(billCreationDate, invoice_dict["name"])
+				case "Pour Tous Purchasing Service":
+					strDescription = _("PTPS/{0}/{1}").format(billCreationDate, invoice_dict["name"])
+				case _:
+					strDescription = _("{0}/{1}").format(billCreationDate, invoice_dict["name"])
+
 			payment_dict = {
 				'reference_doctype': "Customer",
 				'reference_docname': invoice_dict["customer"],
@@ -260,7 +269,7 @@ def add_transfer_billing(invoice_doc, fAmount):
 				"fAmount": str(fAmount),
 				# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
 				# string[0:5] extracts the first 4 chars of the string
-				"strDescription": _("PT-POS-Invoice/{0}").format(invoice_dict["name"]),
+				"strDescription": strDescription,
 				"check": "Yes",
 				"token": transfer_token
 			}
@@ -289,7 +298,7 @@ def add_transfer_billing(invoice_doc, fAmount):
 				integration_request = create_request_log(payment_dict, service_name="FS")
 
 			# appending the integration_request name field as Transaction ID in strDescription
-			payment_dict["strDescription"] = _("{0}/{1}").format(payment_dict["strDescription"], integration_request.name)
+			payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
 
 			if fs_controller.production:
 				fs_service_proxy = fs_controller.production_service
@@ -331,7 +340,7 @@ def add_transfer_billing(invoice_doc, fAmount):
 
 
 @frappe.whitelist(allow_guest=True)
-def add_transfer_draft_fs_bills():
+def add_transfer_fs_draft_bills():
 	# for Offline FS bills
 	draft_fs_bills = frappe.db.sql(
 		"""
@@ -382,6 +391,14 @@ def add_transfer_draft_fs_bills():
 
 				transfer_token = fs_controller.request_transfer_token()
 				if transfer_token:
+					billCreationDate = invoice_doc.creation.date()
+					match frappe.defaults.get_defaults().company:
+						case "Pour Tous Canteen":
+							strDescription = _("PTC/{0}/{1}").format(billCreationDate, invoice_doc.name)
+						case "Pour Tous Purchasing Service":
+							strDescription = _("PTPS/{0}/{1}").format(billCreationDate, invoice_doc.name)
+						case _:
+							strDescription = _("{0}/{1}").format(billCreationDate, invoice_doc.name)
 
 					payment_dict = {
 						'reference_doctype': "Customer",
@@ -393,7 +410,7 @@ def add_transfer_draft_fs_bills():
 						"fAmount": str(fAmount),
 						# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
 						# string[0:5] extracts the first 4 chars of the string
-						"strDescription": _("PT-POS-Invoice/{0}").format(invoice_doc.name),
+						"strDescription": strDescription,
 						"check": "Yes",
 						"token": transfer_token
 					}
@@ -419,7 +436,7 @@ def add_transfer_draft_fs_bills():
 						integration_request = create_request_log(payment_dict, service_name="FS")
 
 					# appending the integration_request name field as Transaction ID in strDescription
-					payment_dict["strDescription"] = _("{0}/{1}").format(payment_dict["strDescription"], integration_request.name)
+					payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
 
 					addTransfer_res = fs_service_proxy.addTransfer(
 						payment_dict["strAccountNumberFrom"],
@@ -460,7 +477,7 @@ def add_transfer_draft_fs_bills():
 				frappe.throw(login_res["Result"])
 
 
-def add_transfer_pending_fs_bills():
+def add_transfer_fs_credit_bills():
 	pending_fs_bills = frappe.db.sql(
     	"""
         SELECT name
@@ -493,6 +510,14 @@ def add_transfer_pending_fs_bills():
 
 				if transfer_token:
 					billCreationDate = invoice_doc.creation.date()
+					match frappe.defaults.get_defaults().company:
+						case "Pour Tous Canteen":
+							strDescription = _("PTC/{0}/{1}").format(billCreationDate, invoice_doc.name)
+						case "Pour Tous Purchasing Service":
+							strDescription = _("PTPS/{0}/{1}").format(billCreationDate, invoice_doc.name)
+						case _:
+							strDescription = _("{0}/{1}").format(billCreationDate, invoice_doc.name)
+
 					payment_dict = {
 						'reference_doctype': "Customer",
 						'reference_docname': invoice_doc.customer,
@@ -503,7 +528,7 @@ def add_transfer_pending_fs_bills():
 						"fAmount": str(fAmount),
 						# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
 						# string[0:5] extracts the first 4 chars of the string
-						"strDescription": _("PT-{0}/{1}").format(billCreationDate, invoice_doc.name),
+						"strDescription": strDescription,
 						"check": "Yes",
 						"token": transfer_token
 					}
@@ -529,7 +554,7 @@ def add_transfer_pending_fs_bills():
 						integration_request = create_request_log(payment_dict, service_name="FS")
 
 					# appending the integration_request name field as Transaction ID in strDescription
-					payment_dict["strDescription"] = _("{0}/{1}").format(payment_dict["strDescription"], integration_request.name)
+					payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
 
 					addTransfer_res = fs_service_proxy.addTransfer(
 						payment_dict["strAccountNumberFrom"],
