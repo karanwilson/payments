@@ -579,22 +579,24 @@ def add_transfer_fs_credit_bills():
 						integration_request.save(ignore_permissions=True)
 						frappe.db.commit()
 
-						invoice_doc.payments[0].mode_of_payment = "FS"
+						
+
+						""" invoice_doc.payments[0].mode_of_payment = "FS"
 						invoice_doc.payments[0].amount = fAmount
 						invoice_doc.paid_amount = fAmount
 						invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
 						invoice_doc.remarks = addTransfer_res["Message"]
 
 						invoice_doc.save()
-						invoice_doc.submit()
+						invoice_doc.submit() """
 
 					else:
 						integration_request.status = "Failed"
 						integration_request.save(ignore_permissions=True)
 						frappe.db.commit()
-						invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
+						""" invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
 						invoice_doc.remarks = addTransfer_res["Message"]
-						invoice_doc.save()
+						invoice_doc.save() """
 						#frappe.throw(addTransfer_res["Result"])
 
 				else:
@@ -602,22 +604,3 @@ def add_transfer_fs_credit_bills():
 
 			else:
 				frappe.throw(login_res["Result"])
-
-
-#@frappe.whitelist(allow_guest=True)
-#def pending_fs_bills_query(customer, company):
-#	values = {
-#		"customer": customer,
-#		"company": company
-#	}
-#
-#	return frappe.db.sql(
-#		"""
-#		SELECT COUNT(name) as pending_fs_bills
-#		FROM `tabSales Invoice`
-#		WHERE customer = %(customer)s AND company = %(company)s AND NOT docstatus = 2
-#		AND NOT status = "Paid" AND NOT status = "Return" AND NOT status = "Credit Note Issued"
-#		""",
-#		values=values,
-#		as_dict=1,
-#	)
