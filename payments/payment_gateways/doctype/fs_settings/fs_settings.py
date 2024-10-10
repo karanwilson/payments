@@ -256,14 +256,13 @@ def add_transfer_billing(invoice_doc, fAmount):
 				strAccountNumberFrom = fs_controller.fs_account
 				strAccountNumberTo = frappe.get_value("Customer", invoice_dict["customer"], "custom_fs_account_number")
 
-			billCreationDate = invoice_dict["creation"][0:10] # string[0:10] extracts the first 10 chars (date) from the datetime string
 			match frappe.defaults.get_defaults().company:
 				case "Pour Tous Canteen":
-					strDescription = _("PTC/{0}/{1}").format(billCreationDate, invoice_dict["name"])
+					strDescription = _("PTC/{0}/{1}").format(invoice_dict["posting_date"], invoice_dict["name"])
 				case "Pour Tous Purchasing Service":
-					strDescription = _("PTPS/{0}/{1}").format(billCreationDate, invoice_dict["name"])
+					strDescription = _("PTPS/{0}/{1}").format(invoice_dict["posting_date"], invoice_dict["name"])
 				case _:
-					strDescription = _("{0}/{1}").format(billCreationDate, invoice_dict["name"])
+					strDescription = _("{0}/{1}").format(invoice_dict["posting_date"], invoice_dict["name"])
 
 			payment_dict = {
 				'reference_doctype': "Customer",
