@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import call_hook_method
+from frappe.utils import call_hook_method, nowdate, get_last_day # for fetching the last date of the month
 from frappe.integrations.utils import create_request_log
 from payments.utils import create_payment_gateway
 import json
@@ -98,6 +98,12 @@ class FSSettings(Document):
 					"Please select another payment method. FS does not support transaction in currency '{0}'"
 				).format(currency)
 			)
+
+
+def get_last_day_of_Month():
+    today = nowdate()
+    last_day_of_Month = get_last_day(today)
+    return last_day_of_Month
 
 
 @frappe.whitelist(allow_guest=True)
@@ -374,6 +380,7 @@ def add_transfer_fs_draft_bills():
 						if float(accountMaxAmount_res["maxAmount"]) < fAmount:
 							invoice_doc.custom_fs_transfer_status = "Insufficient Funds"
 							invoice_doc.outstanding_amount = fAmount # for "Credit Sale"
+							invoice_doc.due_date = get_last_day()
 
 							invoice_doc.save()
 							invoice_doc.submit()
