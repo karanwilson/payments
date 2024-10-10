@@ -380,7 +380,7 @@ def add_transfer_fs_draft_bills():
 						if float(accountMaxAmount_res["maxAmount"]) < fAmount:
 							invoice_doc.custom_fs_transfer_status = "Insufficient Funds"
 							invoice_doc.outstanding_amount = fAmount # for "Credit Sale"
-							invoice_doc.due_date = get_last_day()
+							invoice_doc.due_date = get_last_day_of_Month()
 
 							invoice_doc.save()
 							invoice_doc.submit()
@@ -472,8 +472,11 @@ def add_transfer_fs_draft_bills():
 						integration_request.status = "Failed"
 						integration_request.save(ignore_permissions=True)
 						frappe.db.commit()
+
 						invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
 						invoice_doc.remarks = addTransfer_res["Message"]
+						invoice_doc.due_date = get_last_day_of_Month()
+
 						invoice_doc.save()
 						#frappe.throw(addTransfer_res["Result"])
 
