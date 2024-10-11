@@ -512,7 +512,12 @@ def add_transfer_fs_credit_bills():
 				else:
 					fs_service_proxy = fs_controller.staging_service
 
-				fAmount = invoice_doc.outstanding_amount
+				accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(strAccountNumberFrom)
+				if accountMaxAmount_res["Result"] == "OK":
+					if float(accountMaxAmount_res["maxAmount"]) < invoice_doc.outstanding_amount:
+						fAmount = float(accountMaxAmount_res["maxAmount"])
+					else:
+						fAmount = invoice_doc.outstanding_amount
 
 				strAccountNumberFrom = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
 				strAccountNumberTo = fs_controller.fs_account
@@ -588,7 +593,10 @@ def add_transfer_fs_credit_bills():
 							dn = invoice_doc.name,
 							bank_account=bank_account,
 						)
+						pe.paid_amount = pe.received_amount = fAmount
 						pe.custom_fs_transfer_status = addTransfer_res["Result"]
+						pe.custom_remarks = 1
+						pe.remarks = addTransfer_res["Message"]
 
 						""" invoice_doc.payments[0].mode_of_payment = "FS"
 						invoice_doc.payments[0].amount = fAmount
