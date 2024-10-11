@@ -583,12 +583,12 @@ def add_transfer_fs_credit_bills():
 
 						bank_account = get_bank_cash_account("FS", invoice_doc.company)
 
-						get_payment_entry(
+						pe = get_payment_entry(
 							dt = invoice_doc.doctype,
 							dn = invoice_doc.name,
 							bank_account=bank_account,
-
 						)
+						pe.custom_fs_transfer_status = addTransfer_res["Result"]
 
 						""" invoice_doc.payments[0].mode_of_payment = "FS"
 						invoice_doc.payments[0].amount = fAmount
