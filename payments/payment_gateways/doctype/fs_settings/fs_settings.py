@@ -6,6 +6,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import call_hook_method, nowdate, get_last_day # for fetching the last date of the month
 from frappe.integrations.utils import create_request_log
+from erpnext.accounts.doctype.sales_invoice.sales_invoice import get_bank_cash_account
+from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 from payments.utils import create_payment_gateway
 import json
 
@@ -256,7 +258,7 @@ def add_transfer_billing(invoice_doc, fAmount):
 				strAccountNumberFrom = fs_controller.fs_account
 				strAccountNumberTo = frappe.get_value("Customer", invoice_dict["customer"], "custom_fs_account_number")
 
-			match frappe.defaults.get_defaults().company:
+			match invoice_dict["company"]:
 				case "Pour Tous Canteen":
 					strDescription = _("PTC/{0}/{1}").format(invoice_dict["posting_date"], invoice_dict["name"])
 				case "Pour Tous Purchasing Service":
@@ -398,7 +400,7 @@ def add_transfer_fs_draft_bills():
 				transfer_token = fs_controller.request_transfer_token()
 				if transfer_token:
 					billCreationDate = invoice_doc.creation.date()
-					match frappe.defaults.get_defaults().company:
+					match invoice_doc.company:
 						case "Pour Tous Canteen":
 							strDescription = _("PTC/{0}/{1}").format(billCreationDate, invoice_doc.name)
 						case "Pour Tous Purchasing Service":
@@ -519,7 +521,7 @@ def add_transfer_fs_credit_bills():
 
 				if transfer_token:
 					billCreationDate = invoice_doc.creation.date()
-					match frappe.defaults.get_defaults().company:
+					match invoice_doc.company:
 						case "Pour Tous Canteen":
 							strDescription = _("PTC/{0}/{1}").format(billCreationDate, invoice_doc.name)
 						case "Pour Tous Purchasing Service":
@@ -579,7 +581,14 @@ def add_transfer_fs_credit_bills():
 						integration_request.save(ignore_permissions=True)
 						frappe.db.commit()
 
-						
+						bank_account = get_bank_cash_account("FS", invoice_doc.company)
+
+						get_payment_entry(
+							dt = invoice_doc.doctype,
+							dn = invoice_doc.name,
+							bank_account=bank_account,
+
+						)
 
 						""" invoice_doc.payments[0].mode_of_payment = "FS"
 						invoice_doc.payments[0].amount = fAmount
