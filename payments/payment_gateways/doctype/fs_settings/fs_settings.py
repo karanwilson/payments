@@ -491,9 +491,10 @@ def add_transfer_fs_draft_bills():
 def add_transfer_fs_credit_bills():
 	pending_fs_bills = frappe.db.sql(
     	"""
-        SELECT name
-        FROM `tabSales Invoice`
-        WHERE docstatus = 1 AND (status = "Unpaid" OR status = "Partly Paid")
+		SELECT name
+		FROM `tabSales Invoice`
+		WHERE docstatus = 1 AND status IN
+		("Unpaid", "Unpaid and Discounted", "Partly Paid", "Partly Paid and Discounted", "Overdue", "Overdue and Discounted")
 		AND custom_fs_transfer_status = "Insufficient Funds"
 	    """,
         as_dict=1,
@@ -515,6 +516,7 @@ def add_transfer_fs_credit_bills():
 				accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(strAccountNumberFrom)
 				if accountMaxAmount_res["Result"] == "OK":
 					if float(accountMaxAmount_res["maxAmount"]) < invoice_doc.outstanding_amount:
+						# for incremental debits in case of insufficent funds for the full outstanding amount
 						fAmount = float(accountMaxAmount_res["maxAmount"])
 					else:
 						fAmount = invoice_doc.outstanding_amount
@@ -586,17 +588,24 @@ def add_transfer_fs_credit_bills():
 						integration_request.save(ignore_permissions=True)
 						frappe.db.commit()
 
+						# If FS transfer was successful,
+						# then create a Payment Entry and reconcile with the Sales Invoice
+
 						bank_account = get_bank_cash_account("FS", invoice_doc.company)
 
 						pe = get_payment_entry(
 							dt = invoice_doc.doctype,
 							dn = invoice_doc.name,
-							bank_account=bank_account,
+							bank_account=bank_account["account"],
 						)
+						pe.mode_of_payment = "FS"
 						pe.paid_amount = pe.received_amount = fAmount
 						pe.custom_fs_transfer_status = addTransfer_res["Result"]
 						pe.custom_remarks = 1
 						pe.remarks = addTransfer_res["Message"]
+
+						pe.insert(ignore_permissions=True)
+						pe.submit()
 
 						""" invoice_doc.payments[0].mode_of_payment = "FS"
 						invoice_doc.payments[0].amount = fAmount
