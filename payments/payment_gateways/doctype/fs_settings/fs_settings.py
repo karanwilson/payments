@@ -347,7 +347,7 @@ def add_transfer_billing(invoice_doc, fAmount):
 
 
 @frappe.whitelist(allow_guest=True)
-def add_transfer_fs_draft_bills():
+def add_transfer_fs_draft_bills(name, year):
 	# for Offline FS bills
 	draft_fs_bills = frappe.db.sql(
 		"""
@@ -488,7 +488,8 @@ def add_transfer_fs_draft_bills():
 				frappe.throw(login_res["Result"])
 
 
-def add_transfer_fs_credit_bills():
+@frappe.whitelist(allow_guest=True)
+def add_transfer_fs_credit_bills(name, year):
 	pending_fs_bills = frappe.db.sql(
     	"""
 		SELECT name
@@ -513,14 +514,15 @@ def add_transfer_fs_credit_bills():
 				else:
 					fs_service_proxy = fs_controller.staging_service
 
-				accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(strAccountNumberFrom)
+				""" accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(strAccountNumberFrom)
 				if accountMaxAmount_res["Result"] == "OK":
 					if float(accountMaxAmount_res["maxAmount"]) < invoice_doc.outstanding_amount:
 						# for incremental debits in case of insufficent funds for the full outstanding amount
 						fAmount = float(accountMaxAmount_res["maxAmount"])
 					else:
-						fAmount = invoice_doc.outstanding_amount
+						fAmount = invoice_doc.outstanding_amount """
 
+				fAmount = invoice_doc.outstanding_amount
 				strAccountNumberFrom = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
 				strAccountNumberTo = fs_controller.fs_account
 
@@ -599,7 +601,7 @@ def add_transfer_fs_credit_bills():
 							bank_account=bank_account["account"],
 						)
 						pe.mode_of_payment = "FS"
-						pe.paid_amount = pe.received_amount = fAmount
+						#pe.paid_amount = pe.received_amount = fAmount
 						pe.custom_fs_transfer_status = addTransfer_res["Result"]
 						pe.custom_remarks = 1
 						pe.remarks = addTransfer_res["Message"]
