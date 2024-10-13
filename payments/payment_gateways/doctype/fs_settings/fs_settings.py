@@ -391,7 +391,7 @@ def add_transfer_fs_draft_bills():
 					accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(strAccountNumberFrom)
 					if accountMaxAmount_res["Result"] == "OK":
 						accountMaxAmount = float(accountMaxAmount_res["maxAmount"])
-						if accountMaxAmount < fAmount:
+						if fAmount > accountMaxAmount and accountMaxAmount != -1:
 							invoice_doc.custom_fs_transfer_status = "Insufficient Funds"
 							invoice_doc.outstanding_amount = fAmount # for "Credit Sale"
 							invoice_doc.due_date = get_last_day_of_Month()
@@ -564,19 +564,19 @@ def add_transfer_fs_credit_bills():
 				else:
 					fs_service_proxy = fs_controller.staging_service
 
+				strAccountNumberFrom = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
+				strAccountNumberTo = fs_controller.fs_account
+				fAmount = invoice_doc.outstanding_amount
+
 				accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(strAccountNumberFrom)
 				if accountMaxAmount_res["Result"] == "OK":
 					accountMaxAmount = float(accountMaxAmount_res["maxAmount"])
-					if accountMaxAmount < invoice_doc.outstanding_amount:
+					if fAmount > accountMaxAmount and accountMaxAmount != -1:
 						continue
 						# for incremental debits in case of insufficent funds for the full outstanding amount
 						#fAmount = float(accountMaxAmount_res["maxAmount"])
 					#else:
 						#fAmount = invoice_doc.outstanding_amount
-
-				fAmount = invoice_doc.outstanding_amount
-				strAccountNumberFrom = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
-				strAccountNumberTo = fs_controller.fs_account
 
 				transfer_token = fs_controller.request_transfer_token()
 
