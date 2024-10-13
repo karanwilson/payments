@@ -3,6 +3,7 @@
 
 import frappe
 from frappe import _
+import frappe.model
 from frappe.model.document import Document
 from frappe.utils import call_hook_method, nowdate, get_last_day # for fetching the last date of the month
 from frappe.integrations.utils import create_request_log
@@ -16,6 +17,7 @@ from base64 import b64decode
 from oauthlib.common import urldecode
 from Crypto.Cipher import AES
 import datetime
+from datetime import date
 
 
 class FSSettings(Document):
@@ -347,8 +349,17 @@ def add_transfer_billing(invoice_doc, fAmount):
 
 
 @frappe.whitelist(allow_guest=True)
-def add_transfer_fs_draft_bills(name, year):
+def add_transfer_fs_draft_bills():
 	# for Offline FS bills
+
+	""" match year:
+		case "Current":
+			year = date.today().year
+		case "Previous":
+			year = date.today().year - 1
+		case "Previous-1":
+			year = date.today().year - 2 """
+
 	draft_fs_bills = frappe.db.sql(
 		"""
 		SELECT name
@@ -360,12 +371,13 @@ def add_transfer_fs_draft_bills(name, year):
 
 	if draft_fs_bills:
 		fs_controller = frappe.get_doc("FS Settings")
+		#fs_bulk_trans_doc = frappe.get_doc("FS Bulk Transfer", doc_name.replace("new-fs-bulk-transfer-", ""))
 
 		for bill in draft_fs_bills:
-			invoice_doc = frappe.get_doc("Sales Invoice", bill)
-
 			login_res = fs_controller.fapi_login()
 			if login_res["Result"] == "OK":
+				invoice_doc = frappe.get_doc("Sales Invoice", bill)
+
 				if fs_controller.production:
 					fs_service_proxy = fs_controller.production_service
 				else:
@@ -378,13 +390,25 @@ def add_transfer_fs_draft_bills(name, year):
 
 					accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(strAccountNumberFrom)
 					if accountMaxAmount_res["Result"] == "OK":
-						if float(accountMaxAmount_res["maxAmount"]) < fAmount:
+						accountMaxAmount = float(accountMaxAmount_res["maxAmount"])
+						if accountMaxAmount < fAmount:
 							invoice_doc.custom_fs_transfer_status = "Insufficient Funds"
 							invoice_doc.outstanding_amount = fAmount # for "Credit Sale"
 							invoice_doc.due_date = get_last_day_of_Month()
 
 							invoice_doc.save()
 							invoice_doc.submit()
+
+							""" fs_bulk_trans_doc.append(
+								"transaction_logs",
+								{
+									"customer_name": invoice_doc.customer_name,
+									"fs_account": strAccountNumberFrom,
+									"Invoice ID": invoice_doc.name,
+									"transfer_status": "Insufficient Funds"
+								}
+							) """
+
 							continue
 					else:
 						frappe.throw(accountMaxAmount_res["Result"])
@@ -393,7 +417,6 @@ def add_transfer_fs_draft_bills(name, year):
 					# in case of returns, the amount will be a negative value,
 					# hence convert it to postive, and swap the from/to FS account numbers, to make a return transfer
 					fAmount = abs(fAmount)
-					#frappe.throw(str(fAmount))
 					strAccountNumberFrom = fs_controller.fs_account
 					strAccountNumberTo = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
 
@@ -469,6 +492,16 @@ def add_transfer_fs_draft_bills(name, year):
 						invoice_doc.save()
 						invoice_doc.submit()
 
+						""" fs_bulk_trans_doc.append(
+							"transaction_logs",
+							{
+								"customer_name": invoice_doc.customer_name,
+								"fs_account": strAccountNumberFrom,
+								"Invoice ID": invoice_doc.name,
+								"transfer_status": addTransfer_res["Result"]
+							}
+						) """
+
 					else:
 						integration_request.status = "Failed"
 						integration_request.save(ignore_permissions=True)
@@ -479,7 +512,16 @@ def add_transfer_fs_draft_bills(name, year):
 						invoice_doc.due_date = get_last_day_of_Month()
 
 						invoice_doc.save()
-						#frappe.throw(addTransfer_res["Result"])
+
+						""" fs_bulk_trans_doc.append(
+							"transaction_logs",
+							{
+								"customer_name": invoice_doc.customer_name,
+								"fs_account": strAccountNumberFrom,
+								"Invoice ID": invoice_doc.name,
+								"transfer_status": addTransfer_res["Result"]
+							}
+						) """
 
 				else:
 					frappe.throw("FS transfer token not received")
@@ -489,7 +531,15 @@ def add_transfer_fs_draft_bills(name, year):
 
 
 @frappe.whitelist(allow_guest=True)
-def add_transfer_fs_credit_bills(name, year):
+def add_transfer_fs_credit_bills():
+	""" match year:
+		case "Current":
+			year = date.today().year
+		case "Previous":
+			year = date.today().year - 1
+		case "Previous-1":
+			year = date.today().year - 2 """
+
 	pending_fs_bills = frappe.db.sql(
     	"""
 		SELECT name
@@ -500,27 +550,29 @@ def add_transfer_fs_credit_bills(name, year):
 	    """,
         as_dict=1,
     )
-	
+
 	if pending_fs_bills:
 		fs_controller = frappe.get_doc("FS Settings")
 
 		for bill in pending_fs_bills:
-			invoice_doc = frappe.get_doc("Sales Invoice", bill)
-
 			login_res = fs_controller.fapi_login()
 			if login_res["Result"] == "OK":
+				invoice_doc = frappe.get_doc("Sales Invoice", bill)
+
 				if fs_controller.production:
 					fs_service_proxy = fs_controller.production_service
 				else:
 					fs_service_proxy = fs_controller.staging_service
 
-				""" accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(strAccountNumberFrom)
+				accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(strAccountNumberFrom)
 				if accountMaxAmount_res["Result"] == "OK":
-					if float(accountMaxAmount_res["maxAmount"]) < invoice_doc.outstanding_amount:
+					accountMaxAmount = float(accountMaxAmount_res["maxAmount"])
+					if accountMaxAmount < invoice_doc.outstanding_amount:
+						continue
 						# for incremental debits in case of insufficent funds for the full outstanding amount
-						fAmount = float(accountMaxAmount_res["maxAmount"])
-					else:
-						fAmount = invoice_doc.outstanding_amount """
+						#fAmount = float(accountMaxAmount_res["maxAmount"])
+					#else:
+						#fAmount = invoice_doc.outstanding_amount
 
 				fAmount = invoice_doc.outstanding_amount
 				strAccountNumberFrom = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
@@ -609,23 +661,10 @@ def add_transfer_fs_credit_bills(name, year):
 						pe.insert(ignore_permissions=True)
 						pe.submit()
 
-						""" invoice_doc.payments[0].mode_of_payment = "FS"
-						invoice_doc.payments[0].amount = fAmount
-						invoice_doc.paid_amount = fAmount
-						invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
-						invoice_doc.remarks = addTransfer_res["Message"]
-
-						invoice_doc.save()
-						invoice_doc.submit() """
-
 					else:
 						integration_request.status = "Failed"
 						integration_request.save(ignore_permissions=True)
 						frappe.db.commit()
-						""" invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
-						invoice_doc.remarks = addTransfer_res["Message"]
-						invoice_doc.save() """
-						#frappe.throw(addTransfer_res["Result"])
 
 				else:
 					frappe.throw("FS transfer token not received")
