@@ -41,8 +41,8 @@
           <xsd:complexType name="TransferResponse">
             <xsd:sequence>
               <xsd:element name="Result" type="xsd:string"/>
-              <xsd:element name="maxAmount" type="xsd:string"/>
               <xsd:element name="Message" type="xsd:string"/>
+              <!-- <xsd:element name="maxAmount" type="xsd:string"/> -->
             </xsd:sequence>
           </xsd:complexType>
 
