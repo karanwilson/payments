@@ -260,13 +260,18 @@ def add_transfer_billing(invoice_doc, fAmount):
 				strAccountNumberFrom = fs_controller.fs_account
 				strAccountNumberTo = frappe.get_value("Customer", invoice_dict["customer"], "custom_fs_account_number")
 
+			if invoice_dict["custom_transaction_date"]:
+				trans_date = invoice_dict["custom_transaction_date"]
+			else:
+				trans_date = invoice_dict["posting_date"]
+
 			match invoice_dict["company"]:
 				case "Pour Tous Canteen":
-					strDescription = _("PTC/{0}/{1}").format(invoice_dict["posting_date"], invoice_dict["name"])
+					strDescription = _("PTC/{0}/{1}").format(trans_date, invoice_dict["name"])
 				case "Pour Tous Purchasing Service":
-					strDescription = _("PTPS/{0}/{1}").format(invoice_dict["posting_date"], invoice_dict["name"])
+					strDescription = _("PTPS/{0}/{1}").format(trans_date, invoice_dict["name"])
 				case _:
-					strDescription = _("{0}/{1}").format(invoice_dict["posting_date"], invoice_dict["name"])
+					strDescription = _("{0}/{1}").format(trans_date, invoice_dict["name"])
 
 			payment_dict = {
 				'reference_doctype': "Customer",
@@ -422,14 +427,18 @@ def add_transfer_fs_draft_bills():
 
 				transfer_token = fs_controller.request_transfer_token()
 				if transfer_token:
-					billCreationDate = invoice_doc.creation.date()
+					if invoice_doc.custom_transaction_date:
+						trans_date = invoice_doc.custom_transaction_date
+					else:
+						trans_date = invoice_doc.creation.date()
+
 					match invoice_doc.company:
 						case "Pour Tous Canteen":
-							strDescription = _("PTC/{0}/{1}").format(billCreationDate, invoice_doc.name)
+							strDescription = _("PTC/{0}/{1}").format(trans_date, invoice_doc.name)
 						case "Pour Tous Purchasing Service":
-							strDescription = _("PTPS/{0}/{1}").format(billCreationDate, invoice_doc.name)
+							strDescription = _("PTPS/{0}/{1}").format(trans_date, invoice_doc.name)
 						case _:
-							strDescription = _("{0}/{1}").format(billCreationDate, invoice_doc.name)
+							strDescription = _("{0}/{1}").format(trans_date, invoice_doc.name)
 
 					payment_dict = {
 						'reference_doctype': "Customer",
@@ -581,14 +590,18 @@ def add_transfer_fs_credit_bills():
 				transfer_token = fs_controller.request_transfer_token()
 
 				if transfer_token:
-					billCreationDate = invoice_doc.creation.date()
+					if invoice_doc.custom_transaction_date:
+						trans_date = invoice_doc.custom_transaction_date
+					else:
+						trans_date = invoice_doc.creation.date()
+
 					match invoice_doc.company:
 						case "Pour Tous Canteen":
-							strDescription = _("PTC/{0}/{1}").format(billCreationDate, invoice_doc.name)
+							strDescription = _("PTC/{0}/{1}").format(trans_date, invoice_doc.name)
 						case "Pour Tous Purchasing Service":
-							strDescription = _("PTPS/{0}/{1}").format(billCreationDate, invoice_doc.name)
+							strDescription = _("PTPS/{0}/{1}").format(trans_date, invoice_doc.name)
 						case _:
-							strDescription = _("{0}/{1}").format(billCreationDate, invoice_doc.name)
+							strDescription = _("{0}/{1}").format(trans_date, invoice_doc.name)
 
 					payment_dict = {
 						'reference_doctype': "Customer",
