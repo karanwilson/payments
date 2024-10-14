@@ -395,8 +395,9 @@ def add_transfer_fs_draft_bills():
 
 					accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(strAccountNumberFrom)
 					if accountMaxAmount_res["Result"] == "OK":
-						accountMaxAmount = float(accountMaxAmount_res["maxAmount"])
-						if fAmount > accountMaxAmount and accountMaxAmount != -1:
+						#accountMaxAmount = float(accountMaxAmount_res["maxAmount"])
+						#if fAmount > accountMaxAmount and accountMaxAmount != -1:
+						if fAmount > float(accountMaxAmount_res["maxAmount"]):
 							invoice_doc.custom_fs_transfer_status = "Insufficient Funds"
 							invoice_doc.outstanding_amount = fAmount # for "Credit Sale"
 							invoice_doc.due_date = get_last_day_of_Month()
@@ -579,8 +580,9 @@ def add_transfer_fs_credit_bills():
 
 				accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(strAccountNumberFrom)
 				if accountMaxAmount_res["Result"] == "OK":
-					accountMaxAmount = float(accountMaxAmount_res["maxAmount"])
-					if fAmount > accountMaxAmount and accountMaxAmount != -1:
+					#accountMaxAmount = float(accountMaxAmount_res["maxAmount"])
+					#if fAmount > accountMaxAmount and accountMaxAmount != -1:
+					if fAmount > float(accountMaxAmount_res["maxAmount"]):
 						continue
 						# for incremental debits in case of insufficent funds for the full outstanding amount
 						#fAmount = float(accountMaxAmount_res["maxAmount"])
