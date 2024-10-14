@@ -666,6 +666,8 @@ def add_transfer_fs_credit_bills():
 							bank_account=bank_account["account"],
 						)
 						pe.mode_of_payment = "FS"
+						pe.reference_no = payment_dict["strDescription"]
+						pe.reference_date = nowdate()
 						#pe.paid_amount = pe.received_amount = fAmount
 						pe.custom_fs_transfer_status = addTransfer_res["Result"]
 						pe.custom_remarks = 1
