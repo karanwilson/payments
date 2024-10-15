@@ -260,7 +260,8 @@ def add_transfer_billing(invoice_doc, fAmount):
 				strAccountNumberFrom = fs_controller.fs_account
 				strAccountNumberTo = frappe.get_value("Customer", invoice_dict["customer"], "custom_fs_account_number")
 
-			if invoice_dict["custom_transaction_date"]:
+			#if invoice_dict["custom_transaction_date"]:
+			if "custom_transaction_date" in invoice_dict:
 				trans_date = invoice_dict["custom_transaction_date"]
 			else:
 				trans_date = invoice_dict["posting_date"]
