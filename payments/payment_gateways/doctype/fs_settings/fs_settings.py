@@ -666,7 +666,7 @@ def add_transfer_fs_credit_bills():
 						pe = get_payment_entry(
 							dt = invoice_doc.doctype,
 							dn = invoice_doc.name,
-							bank_account=bank_account["account"],
+							bank_account = bank_account["account"],
 						)
 						pe.mode_of_payment = "FS"
 						pe.reference_no = payment_dict["strDescription"]
