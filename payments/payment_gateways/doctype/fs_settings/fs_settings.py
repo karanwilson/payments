@@ -16,8 +16,8 @@ from zeep import Client #, Settings
 from base64 import b64decode
 from oauthlib.common import urldecode
 from Crypto.Cipher import AES
-import datetime
-from datetime import date
+#import datetime
+from datetime import datetime
 
 
 class FSSettings(Document):
