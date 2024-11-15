@@ -237,24 +237,10 @@ def add_transfer_contribution(doc, method):
 
 
 @frappe.whitelist(allow_guest=True)
-def add_transfer_billing(invoice_doc, fAmount, balance):
+def add_transfer_billing(invoice_doc, fAmount):
 	invoice_dict = json.loads(invoice_doc)
 
 	fs_controller = frappe.get_doc("FS Settings")
-	if fs_controller.production:
-		fs_service_proxy = fs_controller.production_service
-	else:
-		fs_service_proxy = fs_controller.staging_service
-
-	if not balance:
-		fs_account_number = frappe.get_value("Customer", invoice_dict["customer"], "custom_fs_account_number")
-		if not fs_account_number:
-			frappe.throw("FS Account not set")
-		else :
-			accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(strAccountNumberFrom)
-			if accountMaxAmount_res["Result"] == "OK":
-				balance = float(accountMaxAmount_res["maxAmount"])
-
 	login_res = fs_controller.fapi_login()
 
 	if login_res["Result"] == "OK":
@@ -262,17 +248,7 @@ def add_transfer_billing(invoice_doc, fAmount, balance):
 
 		if transfer_token:
 			fAmount_float = float(fAmount) # converting to float in order to do check for negative amounts below
-			balance_float = float(balance)
 			if fAmount_float > 0:
-
-				if balance: # balance_float does not work here, hence using balance
-					if fAmount_float > balance_float and balance_float >= 0:
-						response = {
-							"custom_fs_transfer_status": "Insufficient Funds",
-							"remarks": "Null"
-						}
-						return response
-
 				strAccountNumberFrom = frappe.get_value("Customer", invoice_dict["customer"], "custom_fs_account_number")
 				strAccountNumberTo = fs_controller.fs_account
 
@@ -338,6 +314,11 @@ def add_transfer_billing(invoice_doc, fAmount, balance):
 
 			# appending the integration_request name field as Transaction ID in strDescription
 			payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
+
+			if fs_controller.production:
+				fs_service_proxy = fs_controller.production_service
+			else:
+				fs_service_proxy = fs_controller.staging_service
 
 			addTransfer_res = fs_service_proxy.addTransfer(
 				payment_dict["strAccountNumberFrom"],
