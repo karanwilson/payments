@@ -237,7 +237,7 @@ def add_transfer_contribution(doc, method):
 
 
 @frappe.whitelist(allow_guest=True)
-def add_transfer_billing(invoice_doc, fAmount, balance):
+def add_transfer_billing(invoice_doc, fAmount):
 	invoice_dict = json.loads(invoice_doc)
 
 	fs_controller = frappe.get_doc("FS Settings")
@@ -246,14 +246,17 @@ def add_transfer_billing(invoice_doc, fAmount, balance):
 	else:
 		fs_service_proxy = fs_controller.staging_service
 
-	if not balance:
-		fs_account_number = frappe.get_value("Customer", invoice_dict["customer"], "custom_fs_account_number")
-		if not fs_account_number:
-			frappe.throw("FS Account not set")
+	#if not balance:
+	cust_fs_acc_num = frappe.get_value("Customer", invoice_dict["customer"], "custom_fs_account_number")
+	if cust_fs_acc_num:
+		accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(cust_fs_acc_num)
+		if accountMaxAmount_res["Result"] == "OK" and float(accountMaxAmount_res["maxAmount"]) >= 0:
+		# disallow accounts with balance amount '-1'
+			fs_acc_balance = float(accountMaxAmount_res["maxAmount"])
 		else :
-			accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(strAccountNumberFrom)
-			if accountMaxAmount_res["Result"] == "OK":
-				balance = float(accountMaxAmount_res["maxAmount"])
+			frappe.throw("Please verify the FS Account Number")
+	else:
+		frappe.throw("FS Account not set")
 
 	login_res = fs_controller.fapi_login()
 
@@ -262,18 +265,20 @@ def add_transfer_billing(invoice_doc, fAmount, balance):
 
 		if transfer_token:
 			fAmount_float = float(fAmount) # converting to float in order to do check for negative amounts below
-			balance_float = float(balance)
+			#fs_acc_balance_flt = float(fs_acc_balance)
 			if fAmount_float > 0:
+				#if fs_acc_balance >= 0:
+				if fAmount_float > fs_acc_balance:
+					response = {
+						"custom_fs_transfer_status": "Insufficient Funds",
+						"remarks": "Null"
+					}
+					return response
 
-				if balance: # balance_float does not work here, hence using balance
-					if fAmount_float > balance_float and balance_float >= 0:
-						response = {
-							"custom_fs_transfer_status": "Insufficient Funds",
-							"remarks": "Null"
-						}
-						return response
-
-				strAccountNumberFrom = frappe.get_value("Customer", invoice_dict["customer"], "custom_fs_account_number")
+				#strAccountNumberFrom = frappe.get_value("Customer", invoice_dict["customer"], "custom_fs_account_number")
+				strAccountNumberFrom = cust_fs_acc_num
+				""" if not strAccountNumberFrom:
+					frappe.throw("FS Account not set") """
 				strAccountNumberTo = fs_controller.fs_account
 
 			else:
@@ -282,9 +287,9 @@ def add_transfer_billing(invoice_doc, fAmount, balance):
 				fAmount = abs(fAmount_float)
 				#frappe.throw(str(fAmount))
 				strAccountNumberFrom = fs_controller.fs_account
-				strAccountNumberTo = frappe.get_value("Customer", invoice_dict["customer"], "custom_fs_account_number")
+				#strAccountNumberTo = frappe.get_value("Customer", invoice_dict["customer"], "custom_fs_account_number")
+				strAccountNumberTo = cust_fs_acc_num
 
-			#if invoice_dict["custom_transaction_date"]:
 			if "custom_transaction_date" in invoice_dict:
 				trans_date = invoice_dict["custom_transaction_date"]
 			else:
@@ -370,7 +375,7 @@ def add_transfer_billing(invoice_doc, fAmount, balance):
 			frappe.throw("FS transfer token not received")
 
 	else:
-			frappe.throw(login_res["Result"])
+		frappe.throw(login_res["Result"])
 
 
 @frappe.whitelist(allow_guest=True)
