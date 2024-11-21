@@ -138,7 +138,6 @@ def get_account_max_amount(fs_acc_customer):
 			response = {
 				"Result": accountMaxAmount_res["Result"],
 				"maxAmount": accountMaxAmount_res["maxAmount"],
-				"cust_fs_acc_num": fs_account_number
 			}
 			return response
 
@@ -407,6 +406,7 @@ def add_transfer_fs_draft_bills():
 						#if fAmount > accountMaxAmount and accountMaxAmount != -1:
 						if fAmount > float(accountMaxAmount_res["maxAmount"]):
 							invoice_doc.custom_fs_transfer_status = "Insufficient Funds"
+							invoice_doc.custom_fs_account_number = strAccountNumberFrom
 							invoice_doc.outstanding_amount = fAmount # for "Credit Sale"
 							invoice_doc.due_date = get_last_day_of_Month()
 
@@ -505,6 +505,7 @@ def add_transfer_fs_draft_bills():
 						invoice_doc.payments[0].amount = fAmount
 						invoice_doc.paid_amount = fAmount
 						invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
+						invoice_doc.custom_fs_account_number = payment_dict["strAccountNumberFrom"]
 						invoice_doc.remarks = addTransfer_res["Message"]
 
 						invoice_doc.save()
