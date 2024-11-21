@@ -238,7 +238,7 @@ def add_transfer_contribution(doc, method):
 
 
 @frappe.whitelist(allow_guest=True)
-def add_transfer_billing(invoice_doc, fAmount, cust_fs_acc_num, fs_acc_balance):
+def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 	invoice_dict = json.loads(invoice_doc)
 
 	fs_controller = frappe.get_doc("FS Settings")
@@ -262,7 +262,7 @@ def add_transfer_billing(invoice_doc, fAmount, cust_fs_acc_num, fs_acc_balance):
 					}
 					return response
 
-				strAccountNumberFrom = cust_fs_acc_num
+				strAccountNumberFrom = invoice_dict["custom_fs_account_number"]
 				strAccountNumberTo = fs_controller.fs_account
 
 			else:
@@ -271,7 +271,7 @@ def add_transfer_billing(invoice_doc, fAmount, cust_fs_acc_num, fs_acc_balance):
 				fAmount = abs(fAmount_float)
 				#frappe.throw(str(fAmount))
 				strAccountNumberFrom = fs_controller.fs_account
-				strAccountNumberTo = cust_fs_acc_num
+				strAccountNumberTo = invoice_dict["custom_fs_account_number"]
 
 			if "custom_transaction_date" in invoice_dict:
 				trans_date = invoice_dict["custom_transaction_date"]
