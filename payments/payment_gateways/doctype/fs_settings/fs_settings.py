@@ -235,6 +235,8 @@ def add_transfer_contribution(doc, method):
 		else:
 			frappe.throw(login_res["Result"])
 
+	return
+
 
 @frappe.whitelist(allow_guest=True)
 def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
@@ -553,6 +555,8 @@ def add_transfer_fs_draft_bills():
 			else:
 				frappe.throw(login_res["Result"])
 
+	return
+
 
 @frappe.whitelist(allow_guest=True)
 def add_transfer_fs_credit_bills():
@@ -568,8 +572,7 @@ def add_transfer_fs_credit_bills():
     	"""
 		SELECT name
 		FROM `tabSales Invoice`
-		WHERE docstatus = 1 AND status IN
-		("Unpaid", "Unpaid and Discounted", "Partly Paid", "Partly Paid and Discounted", "Overdue", "Overdue and Discounted")
+		WHERE docstatus = 1 AND status IN ("Unpaid", "Overdue")
 		AND custom_fs_transfer_status = "Insufficient Funds"
 	    """,
         as_dict=1,
@@ -710,6 +713,8 @@ def add_transfer_fs_credit_bills():
 
 			else:
 				frappe.throw(login_res["Result"])
+	
+	return
 
 
 @frappe.whitelist(allow_guest=True)
@@ -855,3 +860,5 @@ def exception_add_transfer_fs_credit_bills():
 
 			else:
 				frappe.throw(login_res["Result"])
+
+	return
