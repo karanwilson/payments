@@ -494,6 +494,14 @@ def add_transfer_fs_draft_bills():
 					# appending the integration_request name field as Transaction ID in strDescription
 					payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
 
+					# adding a dummy remark here in order to be able to save the invoice before initiating an FS payment
+					# so that in case this iteration breaks due to an Item batch QTY insufficient message - the FS transaction should not go through before that.
+					try:
+						invoice_doc.remarks = "Saving this doc, before attempting an FS Transaction"
+						invoice_doc.save()
+					except:
+						frappe.throw("Error (Could be due to Batch availability)")
+
 					addTransfer_res = fs_service_proxy.addTransfer(
 						payment_dict["strAccountNumberFrom"],
 						payment_dict["strAccountNumberTo"],
@@ -508,8 +516,13 @@ def add_transfer_fs_draft_bills():
 						integration_request.save(ignore_permissions=True)
 						frappe.db.commit()
 
-						invoice_doc.payments[0].mode_of_payment = "FS"
-						invoice_doc.payments[0].amount = fAmount
+						#invoice_doc.payments[0].mode_of_payment = "FS"
+						#invoice_doc.payments[0].amount = fAmount
+						for payment in invoice_doc.payments:
+							if payment.mode_of_payment == "FS":
+								payment.amount = fAmount
+								break
+
 						invoice_doc.paid_amount = fAmount
 						invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
 						invoice_doc.custom_fs_account_number = payment_dict["strAccountNumberFrom"]
@@ -596,17 +609,16 @@ def add_transfer_fs_credit_bills():
 				else:
 					fs_service_proxy = fs_controller.staging_service
 
-				strAccountNumberFrom = cust_fs_acc_number
+				#strAccountNumberFrom = cust_fs_acc_number
 
 				strAccountNumberTo = fs_controller.fs_account
 				fAmount = invoice_doc.outstanding_amount
 
-				accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(strAccountNumberFrom)
+				accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(cust_fs_acc_number)
 				if accountMaxAmount_res["Result"] == "OK":
 					#accountMaxAmount = float(accountMaxAmount_res["maxAmount"])
 					#if fAmount > accountMaxAmount and accountMaxAmount != -1:
 					if fAmount > float(accountMaxAmount_res["maxAmount"]):
-
 						continue
 						# for incremental debits in case of insufficent funds for the full outstanding amount
 						#fAmount = float(accountMaxAmount_res["maxAmount"])
@@ -630,11 +642,11 @@ def add_transfer_fs_credit_bills():
 							strDescription = _("{0}/{1}").format(trans_date, invoice_doc.name)
 
 					payment_dict = {
-						'reference_doctype': "Customer",
-						'reference_docname': invoice_doc.customer,
+						"reference_doctype": "Customer",
+						"reference_docname": invoice_doc.customer,
 						"Payment Name": invoice_doc.doctype,
 						"Payment ID": invoice_doc.name,
-						"strAccountNumberFrom": strAccountNumberFrom,
+						"strAccountNumberFrom": cust_fs_acc_number,
 						"strAccountNumberTo": strAccountNumberTo,
 						"fAmount": str(fAmount),
 						# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
