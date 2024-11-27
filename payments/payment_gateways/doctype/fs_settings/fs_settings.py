@@ -722,7 +722,7 @@ def exception_add_transfer_fs_credit_bills():
 
 	exception_pending_fs_bills = frappe.db.sql(
     	"""
-		SELECT name, posting_date, posting_time
+		SELECT name
 		FROM `tabSales Invoice`
 		WHERE posting_date = "2024-11-14" AND posting_time < "12:10:00"
 		AND docstatus = 1 AND status = "Paid"
@@ -732,6 +732,7 @@ def exception_add_transfer_fs_credit_bills():
     )
 
 	if exception_pending_fs_bills:
+		
 		fs_controller = frappe.get_doc("FS Settings")
 
 		for bill in exception_pending_fs_bills:
