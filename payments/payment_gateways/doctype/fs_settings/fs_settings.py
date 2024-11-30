@@ -856,7 +856,26 @@ def add_transfer_exception_fs_credit_bill(bill):
 
 				bank_account = get_bank_cash_account("FS", invoice_doc.company)
 
-				pe = get_payment_entry(
+				pe = frappe.get_doc(
+					{
+						"doctype": "Payment Entry",
+						"mode_of_payment": "FS",
+						"paid_to": bank_account["account"],
+						"payment_type": "Receive",
+						"party_type": "Customer",
+						"party": invoice_doc.customer,
+						"paid_amount": invoice_doc.grand_total,
+						"received_amount": invoice_doc.grand_total,
+						"company": invoice_doc.company,
+						"reference_no": payment_dict["strDescription"],
+						"reference_date": nowdate(),
+						"custom_fs_transfer_status": addTransfer_res["Result"],
+						"custom_remarks": 1,
+						"remarks": addTransfer_res["Message"]
+					}
+				)
+
+				""" pe = get_payment_entry(
 					dt = invoice_doc.doctype,
 					dn = invoice_doc.name,
 					bank_account = bank_account["account"],
@@ -867,7 +886,7 @@ def add_transfer_exception_fs_credit_bill(bill):
 				#pe.paid_amount = pe.received_amount = fAmount
 				pe.custom_fs_transfer_status = addTransfer_res["Result"]
 				pe.custom_remarks = 1
-				pe.remarks = addTransfer_res["Message"]
+				pe.remarks = addTransfer_res["Message"] """
 
 				pe.insert(ignore_permissions=True)
 				pe.submit()
