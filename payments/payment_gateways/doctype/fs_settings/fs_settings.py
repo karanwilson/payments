@@ -607,8 +607,6 @@ def add_transfer_fs_credit_bill(bill):
 		else:
 			fs_service_proxy = fs_controller.staging_service
 
-		#strAccountNumberFrom = cust_fs_acc_number
-
 		strAccountNumberTo = fs_controller.fs_account
 		fAmount = invoice_doc.outstanding_amount
 
@@ -747,7 +745,6 @@ def fetch_exception_fs_credit_bills():
         #as_dict=1,
     )
 
-
 @frappe.whitelist(allow_guest=True)
 def add_transfer_exception_fs_credit_bill(bill):
 	fs_controller = frappe.get_doc("FS Settings")
@@ -764,10 +761,8 @@ def add_transfer_exception_fs_credit_bill(bill):
 		else:
 			fs_service_proxy = fs_controller.staging_service
 
-		#strAccountNumberFrom = cust_fs_acc_number
-
 		strAccountNumberTo = fs_controller.fs_account
-		fAmount = invoice_doc.outstanding_amount
+		fAmount = invoice_doc.grand_total
 
 		accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(cust_fs_acc_number)
 		if accountMaxAmount_res["Result"] == "OK":
@@ -890,6 +885,19 @@ def add_transfer_exception_fs_credit_bill(bill):
 
 				pe.insert(ignore_permissions=True)
 				pe.submit()
+
+				exception_sales_invoice = frappe.get_doc(
+					{
+						"doctype": "Exception Sales Invoice",
+						"sales_invoice": invoice_doc.name,
+						"payment_status": "Paid",
+						"payment_entry": pe.name
+					}
+				)
+
+				exception_sales_invoice.insert(ignore_permissions=True)
+				exception_sales_invoice.submit()
+				frappe.db.commit()
 
 				return addTransfer_res["Result"]
 
