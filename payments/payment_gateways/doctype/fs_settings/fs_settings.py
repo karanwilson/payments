@@ -745,7 +745,7 @@ def fetch_exception_fs_credit_bills():
         #as_dict=1,
     )
 
-@frappe.whitelist(allow_guest=True)
+""" @frappe.whitelist(allow_guest=True)
 def add_transfer_exception_fs_credit_bill(bill):
 	fs_controller = frappe.get_doc("FS Settings")
 	invoice_doc = frappe.get_doc("Sales Invoice", bill)
@@ -870,19 +870,6 @@ def add_transfer_exception_fs_credit_bill(bill):
 					}
 				)
 
-				""" pe = get_payment_entry(
-					dt = invoice_doc.doctype,
-					dn = invoice_doc.name,
-					bank_account = bank_account["account"],
-				)
-				pe.mode_of_payment = "FS"
-				pe.reference_no = payment_dict["strDescription"]
-				pe.reference_date = nowdate()
-				#pe.paid_amount = pe.received_amount = fAmount
-				pe.custom_fs_transfer_status = addTransfer_res["Result"]
-				pe.custom_remarks = 1
-				pe.remarks = addTransfer_res["Message"] """
-
 				pe.insert(ignore_permissions=True)
 				pe.submit()
 
@@ -913,4 +900,4 @@ def add_transfer_exception_fs_credit_bill(bill):
 	else:
 		frappe.throw(login_res["Result"])
 	
-	return
+	return """
