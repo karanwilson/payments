@@ -586,7 +586,7 @@ def fetch_fs_credit_bills():
 		SELECT name
 		FROM `tabSales Invoice`
 		WHERE docstatus = 1 AND status IN ("Unpaid", "Overdue")
-		AND custom_fs_transfer_status = "Insufficient Funds"
+		AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending");
 	    """,
         #as_dict=1,
     )
