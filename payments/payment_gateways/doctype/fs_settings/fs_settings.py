@@ -95,6 +95,17 @@ class FSSettings(Document):
 		# As per the new FAPI SOAP call to requestTransferToken, the transfer_token is required to be an integer.
 
 
+	def fetch_fs_accounts_data(self):
+		request = {"rangeRequest":""}
+
+		if self.production:
+			accountsRange_res = self.production_service.getAccountRange(request)
+		else:
+			accountsRange_res = self.staging_service.getAccountRange(request)
+
+		return accountsRange_res
+
+
 	def	validate_transaction_currency(self, currency):
 		if currency not in self.supported_currencies:
 			frappe.throw(
@@ -120,6 +131,21 @@ def login():
 def logout():
 	fs_controller = frappe.get_doc("FS Settings")
 	return fs_controller.fapi_logout()
+
+
+@frappe.whitelist(allow_guest=True)
+def update_fs_accounts_doctype():
+	fs_controller = frappe.get_doc("FS Settings")
+	login_res = fs_controller.fapi_login()
+
+	if login_res["Result"] == "OK":
+		accountsRange = fs_controller.fetch_fs_accounts_data()
+
+		if "Accounts" in accountsRange:
+			frappe.throw(str(accountsRange["Accounts"]))
+
+			""" frappe.db.delete("FS Account Details")
+			json.loads() """
 
 
 @frappe.whitelist(allow_guest=True)

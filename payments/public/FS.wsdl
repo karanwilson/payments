@@ -38,6 +38,17 @@
             </xsd:sequence>
           </xsd:complexType>
 
+          <xsd:complexType name="rangeRequest">
+            <xsd:sequence>
+              <xsd:element name="accountRange" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:complexType>
+          <xsd:complexType name="rangeResponse">
+            <xsd:sequence>
+              <xsd:element name="Accounts" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:complexType>
+
           <xsd:complexType name="TransferResponse">
             <xsd:sequence>
               <xsd:element name="Result" type="xsd:string"/>
@@ -94,7 +105,6 @@
     <wsdl:part name="check" type="xsd:string"/>
     <wsdl:part name="token" type="xsd:integer"/>
   </wsdl:message>
-
   <wsdl:message name="addTransferResponse">
     <wsdl:part name="return" type="tns:TransferResponse"/>
   </wsdl:message>
@@ -102,9 +112,15 @@
   <wsdl:message name="getMaxAmountRequest">
     <wsdl:part name="strAccountNumberFrom" type="xsd:string"/>
   </wsdl:message>
-
   <wsdl:message name="getMaxAmountResponse">
     <wsdl:part name="return" type="tns:MaxAmountResponse"/>
+  </wsdl:message>
+
+  <wsdl:message name="accountRangeRequest">
+    <wsdl:part name="request" type="tns:rangeRequest"/>
+  </wsdl:message>
+  <wsdl:message name="accountRangeResponse">
+    <wsdl:part name="return" type="tns:rangeResponse"/>
   </wsdl:message>
 
   <wsdl:message name="testTransferRequest">
@@ -143,6 +159,11 @@
     <wsdl:operation name="getAccountMaxAmount">
       <wsdl:input message="tns:getMaxAmountRequest"/>
       <wsdl:output message="tns:getMaxAmountResponse"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="getAccountRange">
+      <wsdl:input message="tns:accountRangeRequest"/>
+      <wsdl:output message="tns:accountRangeResponse"/>
     </wsdl:operation>
 
     <wsdl:operation name="testTransfer">
@@ -202,6 +223,16 @@
 
     <wsdl:operation name="getAccountMaxAmount">
       <soap:operation soapAction="urn:assets/payments/FS/getAccountMaxAmount" style="rpc"/>
+      <wsdl:input>
+        <soap:body use="encoded"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="encoded"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="getAccountRange">
+      <soap:operation soapAction="urn:assets/payments/FS/getAccountRange" style="rpc"/>
       <wsdl:input>
         <soap:body use="encoded"/>
       </wsdl:input>
