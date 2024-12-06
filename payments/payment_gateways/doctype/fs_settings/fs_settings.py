@@ -96,7 +96,7 @@ class FSSettings(Document):
 
 
 	def fetch_fs_accounts_data(self):
-		request = {"rangeRequest":""}
+		request = {"accountRange":""}
 
 		if self.production:
 			accountsRange_res = self.production_service.getAccountRange(request)
@@ -137,15 +137,22 @@ def logout():
 def update_fs_accounts_doctype():
 	fs_controller = frappe.get_doc("FS Settings")
 	login_res = fs_controller.fapi_login()
+	res = {}
 
 	if login_res["Result"] == "OK":
 		accountsRange = fs_controller.fetch_fs_accounts_data()
+		#frappe.throw(str(accountsRange))
 
-		if "Accounts" in accountsRange:
-			frappe.throw(str(accountsRange["Accounts"]))
+		with open('loadFSaccounts.txt', 'w') as file:
+			file.write(str(accountsRange))
 
-			""" frappe.db.delete("FS Account Details")
-			json.loads() """
+		if accountsRange["Result"] == "OK":
+			#frappe.db.delete("FS Account Details")
+			
+			""" res["Accounts"] = json.loads(accountsRange["Accounts"])
+
+			with open('accountsRange.txt', 'w') as file:
+				file.write(str(accountsRange)) """
 
 
 @frappe.whitelist(allow_guest=True)

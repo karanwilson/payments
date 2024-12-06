@@ -45,6 +45,8 @@
           </xsd:complexType>
           <xsd:complexType name="rangeResponse">
             <xsd:sequence>
+              <xsd:element name="Result" type="xsd:string"/>
+              <xsd:element name="RecordCount" type="xsd:string"/>
               <xsd:element name="Accounts" type="xsd:string"/>
             </xsd:sequence>
           </xsd:complexType>
