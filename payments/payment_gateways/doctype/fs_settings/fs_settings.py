@@ -134,10 +134,9 @@ def logout():
 
 
 @frappe.whitelist(allow_guest=True)
-def update_fs_accounts_doctype():
+def fetch_fs_accounts_detail():
 	fs_controller = frappe.get_doc("FS Settings")
 	login_res = fs_controller.fapi_login()
-	res = {}
 
 	if login_res["Result"] == "OK":
 		accountsRange = fs_controller.fetch_fs_accounts_data()
@@ -147,8 +146,32 @@ def update_fs_accounts_doctype():
 			file.write(str(accountsRange))
 
 		if accountsRange["Result"] == "OK":
-			#frappe.db.delete("FS Account Details")
-			
+			frappe.db.delete("FS Account Details")
+			return 
+
+
+@frappe.whitelist(allow_guest=True)
+def update_fs_accounts_doctype():
+	fs_controller = frappe.get_doc("FS Settings")
+	login_res = fs_controller.fapi_login()
+
+	if login_res["Result"] == "OK":
+		accountsRange = fs_controller.fetch_fs_accounts_data()
+		#frappe.throw(str(accountsRange))
+
+		with open('loadFSaccounts.txt', 'w') as file:
+			file.write(str(accountsRange))
+
+		if accountsRange["Result"] == "OK":
+			frappe.db.delete("FS Account Details")
+
+			for row in range(0, accountsRange["RecordCount"]):
+				fs_account = frappe.new_doc("FS Account Details")
+				fs_account.account_number = 1
+				fs_account.account_name = 2
+				fs_account.account_type = 3
+				fs_account.disabled = 4
+
 			""" res["Accounts"] = json.loads(accountsRange["Accounts"])
 
 			with open('accountsRange.txt', 'w') as file:
