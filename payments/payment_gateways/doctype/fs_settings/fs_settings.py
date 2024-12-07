@@ -763,20 +763,14 @@ def add_transfer_fs_credit_bill(bill):
 	return
 
 
-@frappe.whitelist(allow_guest=True)
-def fetch_exception_fs_credit_bills():
+#@frappe.whitelist(allow_guest=True)
+#def fetch_exception_fs_credit_bills():
 
-	return frappe.db.sql(
-    	"""
-		SELECT name
-		FROM `tabSales Invoice`
-		WHERE posting_date = "2024-11-14" AND posting_time < "12:10:00"
-		AND docstatus = 1 AND status = "Paid"
-		AND custom_fs_transfer_status = "Insufficient Funds"
-		AND name != "SINV-24-00532"
-	    """,
-        #as_dict=1,
-    )
+#	return frappe.db.sql(
+#   	"""
+#	    """,
+#       #as_dict=1,
+#  )
 
 """ @frappe.whitelist(allow_guest=True)
 def add_transfer_exception_fs_credit_bill(bill):
@@ -932,5 +926,5 @@ def add_transfer_exception_fs_credit_bill(bill):
 
 	else:
 		frappe.throw(login_res["Result"])
-	
+
 	return """
