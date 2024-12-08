@@ -145,9 +145,12 @@ def fetch_fs_accounts_detail():
 		with open('loadFSaccounts.txt', 'w') as file:
 			file.write(str(accountsRange))
 
-		if accountsRange["Result"] == "OK":
-			frappe.db.delete("FS Account Details")
-			return 
+		#if accountsRange["Result"] == "OK":
+		return {
+			"Result": accountsRange["Result"],
+			"RecordCount": accountsRange["RecordCount"],
+			"Accounts": accountsRange["Accounts"]
+		}
 
 
 @frappe.whitelist(allow_guest=True)
