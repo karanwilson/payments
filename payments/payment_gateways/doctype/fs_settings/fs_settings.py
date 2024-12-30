@@ -644,7 +644,7 @@ def fetch_fs_credit_bills():
     	"""
 		SELECT name
 		FROM `tabSales Invoice`
-		WHERE docstatus = 1 AND status IN ("Unpaid", "Overdue")
+		WHERE docstatus = 1 AND status IN ("Unpaid", "Overdue", "Return")
 		AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending");
 	    """,
         #as_dict=1,
@@ -666,19 +666,31 @@ def add_transfer_fs_credit_bill(bill):
 		else:
 			fs_service_proxy = fs_controller.staging_service
 
-		strAccountNumberTo = fs_controller.fs_account
 		fAmount = invoice_doc.outstanding_amount
 
 		accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(cust_fs_acc_number)
 		if accountMaxAmount_res["Result"] == "OK":
 			#accountMaxAmount = float(accountMaxAmount_res["maxAmount"])
-			#if fAmount > accountMaxAmount and accountMaxAmount != -1:
-			if fAmount > float(accountMaxAmount_res["maxAmount"]):
-				return
-				# for incremental debits in case of insufficent funds for the full outstanding amount
-				#fAmount = float(accountMaxAmount_res["maxAmount"])
-			#else:
-				#fAmount = invoice_doc.outstanding_amount
+			#if fAmount > accountMaxAmount:
+
+			fAmount_float = float(fAmount) # converting to float in order to do check for negative amounts below
+			if fAmount_float > 0:
+				if fAmount_float > float(accountMaxAmount_res["maxAmount"]):
+					return
+					# for incremental debits in case of insufficent funds for the full outstanding amount
+					#fAmount = float(accountMaxAmount_res["maxAmount"])
+				else:
+					strAccountNumberFrom = cust_fs_acc_number
+					strAccountNumberTo = fs_controller.fs_account
+					#fAmount = invoice_doc.outstanding_amount
+
+			else:
+				# in case of returns, the amount will be a negative value,
+				# hence convert it to postive, and swap the from/to FS account numbers, to make a return transfer
+				fAmount = abs(fAmount_float)
+				#frappe.throw(str(fAmount))
+				strAccountNumberFrom = fs_controller.fs_account
+				strAccountNumberTo = cust_fs_acc_number
 
 		else:
 			frappe.throw(accountMaxAmount_res["Result"])
@@ -704,7 +716,7 @@ def add_transfer_fs_credit_bill(bill):
 				"reference_docname": invoice_doc.customer,
 				"Payment Name": invoice_doc.doctype,
 				"Payment ID": invoice_doc.name,
-				"strAccountNumberFrom": cust_fs_acc_number,
+				"strAccountNumberFrom": strAccountNumberFrom,
 				"strAccountNumberTo": strAccountNumberTo,
 				"fAmount": str(fAmount),
 				# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
