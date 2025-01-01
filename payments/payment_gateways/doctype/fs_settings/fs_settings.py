@@ -555,6 +555,8 @@ def add_transfer_fs_credit_bill(bill):
 				frappe.db.commit()
 
 				invoice_doc.custom_fs_transfer_status = "OK - Paid"
+				invoice_doc.save()
+				frappe.db.commit()
 
 				# If FS transfer was successful,
 				# then create a Payment Entry and reconcile with the Sales Invoice
