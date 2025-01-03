@@ -301,6 +301,9 @@ def add_transfer_contribution(doc, method):
 def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 	invoice_dict = json.loads(invoice_doc)
 
+	if invoice_dict["is_return"] and frappe.get_value("Sales Invoice", invoice_dict["return_against"], "custom_fs_transfer_status") == "Insufficient Funds":
+		return { "return_against_invoice_transfer_status": "Insufficient Funds" }
+
 	fs_controller = frappe.get_doc("FS Settings")
 	if fs_controller.production:
 		fs_service_proxy = fs_controller.production_service
@@ -552,7 +555,7 @@ def add_transfer_fs_credit_bill(bill):
 			if addTransfer_res["Result"] == "OK":
 				integration_request.status = "Completed"
 				integration_request.save(ignore_permissions=True)
-				frappe.db.commit()
+				#frappe.db.commit()
 
 				invoice_doc.custom_fs_transfer_status = "OK - Paid"
 				invoice_doc.save()
