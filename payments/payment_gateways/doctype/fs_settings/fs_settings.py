@@ -300,8 +300,12 @@ def add_transfer_contribution(doc, method):
 @frappe.whitelist(allow_guest=True)
 def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 	invoice_dict = json.loads(invoice_doc)
+	#frappe.throw(str(len(invoice_dict["items"])))
 
 	if invoice_dict["is_return"] and frappe.get_value("Sales Invoice", invoice_dict["return_against"], "custom_fs_transfer_status") == "Insufficient Funds":
+		""" original_invoice = frappe.get_doc("Sales Invoice", invoice_dict["return_against"])
+		if len(invoice_dict["items"]) < len(original_invoice.items): """
+
 		return { "return_against_invoice_transfer_status": "Insufficient Funds" }
 
 	fs_controller = frappe.get_doc("FS Settings")
