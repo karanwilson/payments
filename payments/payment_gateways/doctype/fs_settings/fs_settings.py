@@ -495,10 +495,7 @@ def add_transfer_sales_order(order):
 		transfer_token = fs_controller.request_transfer_token()
 
 		if transfer_token:
-			if order_doc.transaction_date:
-				trans_date = order_doc.custom_transaction_date
-			else:
-				trans_date = order_doc.creation.date()
+			trans_date = order_doc.transaction_date
 
 			match order_doc.company:
 				case "Pour Tous Canteen":
