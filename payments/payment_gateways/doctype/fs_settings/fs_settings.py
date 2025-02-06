@@ -298,8 +298,26 @@ def add_transfer_contribution(doc, method):
 
 
 @frappe.whitelist(allow_guest=True)
-def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
+def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance, retry_submit):
 	invoice_dict = json.loads(invoice_doc)
+
+	if retry_submit == "true":
+		draft_invoice_fs_payment_id = frappe.get_value("Draft Invoice FS Payment", {"sales_invoice": invoice_dict["name"]}, "name")
+		if draft_invoice_fs_payment_id:
+			draft_invoice_fs_payment = frappe.get_doc("Draft Invoice FS Payment", draft_invoice_fs_payment_id)
+			if draft_invoice_fs_payment.amount_paid == invoice_dict["grand_total"]: # this checks for any changes in invoice value, after the FS payment
+				return {
+					"custom_fs_transfer_status": draft_invoice_fs_payment.fs_transfer_status,
+					"remarks": draft_invoice_fs_payment.remarks
+				}
+			else:
+				message = "The invoice amount has changed, but an FS payment was already made/completed during the previous submit attempt"
+				return {
+					"custom_fs_transfer_status": message
+				}
+
+		""" if draft_invoice_fs_payment_id:
+			integration_request = frappe.get_doc("Integration Request", remarks[-11:-1]) # extracts from the last 11th char till the last-but-one char """
 
 	fs_controller = frappe.get_doc("FS Settings")
 	if fs_controller.production:
@@ -366,7 +384,7 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 
 			integration_request = None
 
-			# if exists, fetch the existing integration request for this "Payment Entry" doc
+			# if exists, fetch the existing integration request for this doc
 			for integration_request_existing in frappe.get_all(
 				"Integration Request",
 				filters={"status": "Queued", "integration_request_service": "FS", },
