@@ -220,10 +220,12 @@ def add_transfer_contribution(doc, method):
 				strAccountNumberFrom = frappe.get_value(doc.party_type, doc.party, "custom_fs_account_number")
 
 				payment_dict = {
-					'reference_doctype': doc.party_type,
-					'reference_docname': doc.party,
-					"Payment Name": doc.doctype,
-					"Payment ID": doc.name,
+					'reference_doctype': doc.doctype,
+					'reference_docname': doc.name,
+					"Customer Name": doc.party_type,
+					"Customer ID": doc.party,
+					#"Payment Name": "",
+					#"Payment ID": ,
 					"strAccountNumberFrom": strAccountNumberFrom,
 					"strAccountNumberTo": fs_controller.fs_account,
 					"fAmount": str(doc.paid_amount),
@@ -365,10 +367,12 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance, retry_submit):
 					strDescription = _("{0}/{1}").format(trans_date, invoice_dict["name"])
 
 			payment_dict = {
-				'reference_doctype': "Customer",
-				'reference_docname': invoice_dict["customer"],
-				"Payment Name": invoice_dict["doctype"],
-				"Payment ID": invoice_dict["name"],
+				'reference_doctype': invoice_dict["doctype"],
+				'reference_docname': invoice_dict["name"],
+				"Customer Name": invoice_dict["customer_name"],
+				"Customer ID": invoice_dict["customer"],
+				#"Payment Name": "",
+				#"Payment ID": ,
 				"strAccountNumberFrom": strAccountNumberFrom,
 				"strAccountNumberTo": strAccountNumberTo,
 				"fAmount": str(fAmount),
@@ -524,10 +528,12 @@ def add_transfer_sales_order(order):
 					strDescription = _("{0}/{1}").format(trans_date, order_doc.name)
 
 			payment_dict = {
-				"reference_doctype": "Customer",
-				"reference_docname": order_doc.customer,
-				"Payment Name": order_doc.doctype,
-				"Payment ID": order_doc.name,
+				'reference_doctype': order_doc.doctype,
+				'reference_docname': order_doc.name,
+				"Customer Name": order_doc.customer_name,
+				"Customer ID": order_doc.customer,
+				#"Payment Name": "",
+				#"Payment ID": ,
 				"strAccountNumberFrom": strAccountNumberFrom,
 				"strAccountNumberTo": strAccountNumberTo,
 				"fAmount": str(fAmount),
@@ -702,10 +708,12 @@ def add_transfer_fs_credit_bill(bill):
 					strDescription = _("{0}/{1}").format(trans_date, invoice_doc.name)
 
 			payment_dict = {
-				"reference_doctype": "Customer",
-				"reference_docname": invoice_doc.customer,
-				"Payment Name": invoice_doc.doctype,
-				"Payment ID": invoice_doc.name,
+				'reference_doctype': invoice_doc.doctype,
+				'reference_docname': invoice_doc.name,
+				"Customer Name": invoice_doc.customer_name,
+				"Customer ID": invoice_doc.customer,
+				#"Payment Name": "",
+				#"Payment ID": ,
 				"strAccountNumberFrom": strAccountNumberFrom,
 				"strAccountNumberTo": strAccountNumberTo,
 				"fAmount": str(fAmount),
@@ -891,10 +899,12 @@ def add_transfer_fs_draft_bills():
 							strDescription = _("{0}/{1}").format(trans_date, invoice_doc.name)
 
 					payment_dict = {
-						'reference_doctype': "Customer",
-						'reference_docname': invoice_doc.customer,
-						"Payment Name": invoice_doc.doctype,
-						"Payment ID": invoice_doc.name,
+						'reference_doctype': invoice_doc.doctype,
+						'reference_docname': invoice_doc.name,
+						"Customer Name": invoice_doc.customer_name,
+						"Customer ID": invoice_doc.customer,
+						#"Payment Name": "",
+						#"Payment ID": ,
 						"strAccountNumberFrom": strAccountNumberFrom,
 						"strAccountNumberTo": strAccountNumberTo,
 						"fAmount": str(fAmount),
@@ -1064,10 +1074,12 @@ def add_transfer_exception_fs_credit_bill(bill):
 					strDescription = _("{0}/{1}").format(trans_date, invoice_doc.name)
 
 			payment_dict = {
-				"reference_doctype": "Customer",
-				"reference_docname": invoice_doc.customer,
-				"Payment Name": invoice_doc.doctype,
-				"Payment ID": invoice_doc.name,
+				'reference_doctype': invoice_doc.doctype,
+				'reference_docname': invoice_doc.name,
+				"Customer Name": invoice_doc.customer_name,
+				"Customer ID": invoice_doc.customer,
+				#"Payment Name": "",
+				#"Payment ID": ,
 				"strAccountNumberFrom": cust_fs_acc_number,
 				"strAccountNumberTo": strAccountNumberTo,
 				"fAmount": str(fAmount),
