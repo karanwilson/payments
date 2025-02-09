@@ -307,12 +307,24 @@ def add_transfer_contribution(doc, method):
 def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 	invoice_dict = json.loads(invoice_doc)
 
-	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_dict["name"], "status": "completed"}, "name")
+	integration_request = None
+
+	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_dict["name"]}, "name")
 	if integration_request_existing:
-		return {
-			"custom_fs_transfer_status": "Duplicate Payment Request",
-			"remarks": "Null"
-		}
+		integration_request = frappe.get_doc("Integration Request", integration_request_existing)
+		if integration_request.status == "Completed":
+			data = json.loads(integration_request.data)
+			# appending the integration_request name field as Transaction ID in strDescription
+			remarks = _("{0}/{1}").format(data["strDescription"], integration_request.name)
+			return {
+				"custom_fs_transfer_status": "OK",
+				"remarks": remarks
+			}
+		elif integration_request.status == "Queued":
+			return {
+				"custom_fs_transfer_status": "Payment in Progress",
+				"remarks": "Null"
+			}
 
 	fs_controller = frappe.get_doc("FS Settings")
 	if fs_controller.production:
@@ -320,119 +332,138 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 	else:
 		fs_service_proxy = fs_controller.staging_service
 
-	login_res = fs_controller.fapi_login()
 
-	if login_res["Result"] == "OK":
+	try:
+		# FAPI stage-1
+		login_res = fs_controller.fapi_login()
+		if login_res["Result"] != "OK":
+			return {
+				"custom_fs_transfer_status": login_res["Result"],
+				"remarks": "Null"
+			}
+
+		# FAPI stage-2
+		transfer_token = None
 		transfer_token = fs_controller.request_transfer_token()
-
-		if transfer_token:
-			fAmount_float = float(fAmount) # converting to float in order to do check for negative amounts below
-			if fAmount_float > 0:
-				if fAmount_float > float(fs_acc_balance):
-					return {
-						"custom_fs_transfer_status": "Insufficient Funds",
-						"remarks": "Null"
-					}
-
-				strAccountNumberFrom = invoice_dict["custom_fs_account_number"]
-				strAccountNumberTo = fs_controller.fs_account
-
-			else:
-				# in case of returns, the amount will be a negative value,
-				# hence convert it to postive, and swap the from/to FS account numbers, to make a return transfer
-				fAmount = abs(fAmount_float)
-				#frappe.throw(str(fAmount))
-				strAccountNumberFrom = fs_controller.fs_account
-				strAccountNumberTo = invoice_dict["custom_fs_account_number"]
-
-			if "custom_transaction_date" in invoice_dict:
-				trans_date = invoice_dict["custom_transaction_date"]
-			else:
-				trans_date = invoice_dict["posting_date"]
-
-			match invoice_dict["company"]:
-				case "Pour Tous Canteen":
-					strDescription = _("PTC/{0}/{1}").format(trans_date, invoice_dict["name"])
-				case "Pour Tous Purchasing Service":
-					strDescription = _("PTPS/{0}/{1}").format(trans_date, invoice_dict["name"])
-				case _:
-					strDescription = _("{0}/{1}").format(trans_date, invoice_dict["name"])
-
-			payment_dict = {
-				'reference_doctype': invoice_dict["doctype"],
-				'reference_docname': invoice_dict["name"],
-				"Customer Name": invoice_dict["customer_name"],
-				"Customer ID": invoice_dict["customer"],
-				#"Payment Name": "",
-				#"Payment ID": ,
-				"strAccountNumberFrom": strAccountNumberFrom,
-				"strAccountNumberTo": strAccountNumberTo,
-				"fAmount": str(fAmount),
-				# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
-				# string[0:5] extracts the first 4 chars of the string
-				"strDescription": strDescription,
-				"check": "Yes",
-				"token": transfer_token
+		if not transfer_token:
+			return {
+				"custom_fs_transfer_status": "FS transfer token not received",
+				"remarks": "Null"
 			}
 
-			#with open('fapi.txt', 'w') as file:
-			#	file.write(str())
+		fAmount_float = float(fAmount) # converting to float in order to do check for negative amounts below
+		if fAmount_float > 0:
+			if fAmount_float > float(fs_acc_balance):
+				return {
+					"custom_fs_transfer_status": "Insufficient Funds",
+					"remarks": "Null"
+				}
 
-			integration_request = None
-
-			# if exists, fetch the existing integration request for this doc
-			for integration_request_existing in frappe.get_all(
-				"Integration Request",
-				filters={"status": "Queued", "integration_request_service": "FS", },
-				fields=["name", "data"],
-			):
-				data = json.loads(integration_request_existing.data)
-				if data["Payment ID"] == invoice_dict["name"] :
-					integration_request = frappe.get_doc("Integration Request", integration_request_existing)
-					#payment_dict_json = frappe.as_json(payment_dict, indent=1)
-					#frappe.db.set_value("Integration Request", integration_request_existing.name, "data", payment_dict_json)
-					break
-
-			# Create an "Integration Request" in case of a fresh transfer
-			if not integration_request:
-				# Create integration log
-				integration_request = create_request_log(payment_dict, service_name="FS")
-
-			# appending the integration_request name field as Transaction ID in strDescription
-			payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
-
-			addTransfer_res = fs_service_proxy.addTransfer(
-				payment_dict["strAccountNumberFrom"],
-				payment_dict["strAccountNumberTo"],
-				payment_dict["fAmount"],
-				payment_dict["strDescription"],
-				payment_dict["check"],
-				payment_dict["token"]
-			)
-
-			# Explore whether to store the default FS transaction message, or request for a transaction ID..
-			response = {
-				"custom_fs_transfer_status": addTransfer_res["Result"],
-				"remarks": addTransfer_res["Message"]
-			}
-
-			if addTransfer_res["Result"] == "OK":
-				integration_request.status = "Completed"
-				integration_request.save(ignore_permissions=True)
-				frappe.db.commit()
-				return response
-
-			else:
-				integration_request.status = "Failed"
-				integration_request.save(ignore_permissions=True)
-				frappe.db.commit()
-				return response
+			strAccountNumberFrom = invoice_dict["custom_fs_account_number"]
+			strAccountNumberTo = fs_controller.fs_account
 
 		else:
-			frappe.throw("FS transfer token not received")
+			# in case of returns, the amount will be a negative value,
+			# hence convert it to postive, and swap the from/to FS account numbers, to make a return transfer
+			fAmount = abs(fAmount_float)
+			#frappe.throw(str(fAmount))
+			strAccountNumberFrom = fs_controller.fs_account
+			strAccountNumberTo = invoice_dict["custom_fs_account_number"]
 
-	else:
-		frappe.throw(login_res["Result"])
+		if "custom_transaction_date" in invoice_dict:
+			trans_date = invoice_dict["custom_transaction_date"]
+		else:
+			trans_date = invoice_dict["posting_date"]
+
+		match invoice_dict["company"]:
+			case "Pour Tous Canteen":
+				strDescription = _("PTC/{0}/{1}").format(trans_date, invoice_dict["name"])
+			case "Pour Tous Purchasing Service":
+				strDescription = _("PTPS/{0}/{1}").format(trans_date, invoice_dict["name"])
+			case _:
+				strDescription = _("{0}/{1}").format(trans_date, invoice_dict["name"])
+
+		payment_dict = {
+			'reference_doctype': invoice_dict["doctype"],
+			'reference_docname': invoice_dict["name"],
+			"Customer Name": invoice_dict["customer_name"],
+			"Customer ID": invoice_dict["customer"],
+			#"Payment Name": "",
+			#"Payment ID": ,
+			"strAccountNumberFrom": strAccountNumberFrom,
+			"strAccountNumberTo": strAccountNumberTo,
+			"fAmount": str(fAmount),
+			# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
+			# string[0:5] extracts the first 4 chars of the string
+			"strDescription": strDescription,
+			"check": "Yes",
+			"token": transfer_token
+		}
+
+		#with open('fapi.txt', 'w') as file:
+		#	file.write(str())
+
+		""" integration_request = None
+
+		# if exists, fetch the existing integration request for this doc
+		for integration_request_existing in frappe.get_all(
+			"Integration Request",
+			filters={"status": "Queued", "integration_request_service": "FS", },
+			fields=["name", "data"],
+		):
+			data = json.loads(integration_request_existing.data)
+			if data["Payment ID"] == invoice_dict["name"] :
+				integration_request = frappe.get_doc("Integration Request", integration_request_existing)
+				#payment_dict_json = frappe.as_json(payment_dict, indent=1)
+				#frappe.db.set_value("Integration Request", integration_request_existing.name, "data", payment_dict_json)
+				break """
+
+		# Create an "Integration Request" in case of a fresh transfer
+		if not integration_request:
+			# Create integration log
+			integration_request = create_request_log(payment_dict, service_name="FS")
+
+		# appending the integration_request name field as Transaction ID in strDescription
+		payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
+
+		# FAPI stage-3
+		addTransfer_res = fs_service_proxy.addTransfer(
+			payment_dict["strAccountNumberFrom"],
+			payment_dict["strAccountNumberTo"],
+			payment_dict["fAmount"],
+			payment_dict["strDescription"],
+			payment_dict["check"],
+			payment_dict["token"]
+		)
+
+		# Explore whether to store the default FS transaction message, or request for a transaction ID..
+		response = {
+			"custom_fs_transfer_status": addTransfer_res["Result"],
+			"remarks": addTransfer_res["Message"]
+		}
+
+		if addTransfer_res["Result"] == "OK":
+			integration_request.status = "Completed"
+			integration_request.save(ignore_permissions=True)
+			frappe.db.commit()
+			return response
+
+		else:
+			integration_request.status = "Failed"
+			integration_request.save(ignore_permissions=True)
+			frappe.db.commit()
+			return response
+
+	except Exception as err:
+		if integration_request:
+			integration_request.status = "Failed"
+			integration_request.save(ignore_permissions=True)
+			frappe.db.commit()
+
+		return {
+			"custom_fs_transfer_status": err,
+			"remarks": "Null"
+		}
 
 
 @frappe.whitelist(allow_guest=True)
