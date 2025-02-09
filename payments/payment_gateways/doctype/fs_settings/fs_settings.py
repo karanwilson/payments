@@ -210,6 +210,10 @@ def add_transfer_contribution(doc, method):
 	# the function also doesn't run in case a FS Transfer Status has value "OK"
 	if doc.custom_contribution_type:
 
+		integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": doc.name, "status": "completed"}, "name")
+		if integration_request_existing:
+			return
+
 		fs_controller = frappe.get_doc("FS Settings")
 		login_res = fs_controller.fapi_login()
 
@@ -464,11 +468,16 @@ def fetch_unpaid_sales_orders():
 
 @frappe.whitelist(allow_guest=True)
 def add_transfer_sales_order(order):
-	fs_controller = frappe.get_doc("FS Settings")
 	order_doc = frappe.get_doc("Sales Order", order)
 	#cust_fs_acc_number = frappe.get_value("Customer", order_doc.customer, "custom_fs_account_number")
 	if not order_doc.custom_fs_account_number:
 		frappe.throw(str(order_doc.customer))
+
+	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": order_doc.name, "status": "completed"}, "name")
+	if integration_request_existing:
+		return
+
+	fs_controller = frappe.get_doc("FS Settings")
 
 	login_res = fs_controller.fapi_login()
 	if login_res["Result"] == "OK":
@@ -636,11 +645,17 @@ def fetch_fs_credit_bills():
 
 @frappe.whitelist(allow_guest=True)
 def add_transfer_fs_credit_bill(bill):
-	fs_controller = frappe.get_doc("FS Settings")
 	invoice_doc = frappe.get_doc("Sales Invoice", bill)
+
+	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_doc.name, "status": "completed"}, "name")
+	if integration_request_existing:
+		return
+
 	cust_fs_acc_number = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
 	if not cust_fs_acc_number:
 		frappe.throw(str(invoice_doc.customer))
+
+	fs_controller = frappe.get_doc("FS Settings")
 
 	login_res = fs_controller.fapi_login()
 	if login_res["Result"] == "OK":
@@ -819,6 +834,10 @@ def add_transfer_fs_draft_bills():
 
 		for bill in draft_fs_bills:
 			invoice_doc = frappe.get_doc("Sales Invoice", bill)
+	
+			integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_doc.name, "status": "completed"}, "name")
+			if integration_request_existing:
+				return
 
 			cust_fs_acc_number = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
 			if not cust_fs_acc_number:
@@ -849,16 +868,6 @@ def add_transfer_fs_draft_bills():
 
 							invoice_doc.save()
 							invoice_doc.submit()
-
-							""" fs_bulk_trans_doc.append(
-								"transaction_logs",
-								{
-									"customer_name": invoice_doc.customer_name,
-									"fs_account": strAccountNumberFrom,
-									"Invoice ID": invoice_doc.name,
-									"transfer_status": "Insufficient Funds"
-								}
-							) """
 
 							continue
 					else:
