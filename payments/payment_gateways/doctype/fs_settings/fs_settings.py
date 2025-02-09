@@ -837,7 +837,7 @@ def add_transfer_fs_draft_bills():
 	
 			integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_doc.name, "status": "completed"}, "name")
 			if integration_request_existing:
-				return
+				continue
 
 			cust_fs_acc_number = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
 			if not cust_fs_acc_number:
