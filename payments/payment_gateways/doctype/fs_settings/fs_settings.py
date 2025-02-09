@@ -12,7 +12,8 @@ from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_ent
 from payments.utils import create_payment_gateway
 import json
 
-from zeep import Client #, Settings
+from zeep import Client
+from zeep.transports import Transport
 from base64 import b64decode
 from oauthlib.common import urldecode
 from Crypto.Cipher import AES
@@ -23,7 +24,8 @@ from datetime import datetime
 class FSSettings(Document):
 	supported_currencies = ["INR"]
 	# Initialise the SOAP client
-	fs_client = Client("assets/payments/FS.wsdl")
+	transport = Transport(timeout=10, operation_timeout=15)
+	fs_client = Client("assets/payments/FS.wsdl", transport=transport)
 	production_service = fs_client.create_service("{urn:assets/payments/FS}FS_SoapBinding", "https://api3.avfs.org.in/server3.php")
 	staging_service = fs_client.create_service("{urn:assets/payments/FS}FS_SoapBinding", "https://api3-staging.financialservice.org.in/server3.php")
 
