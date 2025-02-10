@@ -508,6 +508,10 @@ def add_transfer_sales_order(order):
 
 	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": order_doc.name, "status": "completed"}, "name")
 	if integration_request_existing:
+		frappe.msgprint(
+			msg=_("Duplicate Payment Request: Sales Order {0} was paid with Integration Request {1}").format(order_doc.name, integration_request_existing),
+			title='Error',
+		)
 		return
 
 	fs_controller = frappe.get_doc("FS Settings")
@@ -579,11 +583,12 @@ def add_transfer_sales_order(order):
 		# if exists, fetch the existing integration request for this "Payment Entry" doc
 		for integration_request_existing in frappe.get_all(
 			"Integration Request",
-			filters={"status": "Queued", "integration_request_service": "FS", },
+			#filters={"status": "Queued", "integration_request_service": "FS", },
+			filters={"status": ["in", {"Queued", "Failed"}], "integration_request_service": "FS", },
 			fields=["name", "data"],
 		):
 			data = json.loads(integration_request_existing.data)
-			if data["Payment ID"] == order_doc.name :
+			if data["reference_docname"] == order_doc.name :
 				integration_request = frappe.get_doc("Integration Request", integration_request_existing)
 				#payment_dict_json = frappe.as_json(payment_dict, indent=1)
 				#frappe.db.set_value("Integration Request", integration_request_existing.name, "data", payment_dict_json)
@@ -689,6 +694,10 @@ def add_transfer_fs_credit_bill(bill):
 
 	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_doc.name, "status": "completed"}, "name")
 	if integration_request_existing:
+		frappe.msgprint(
+			msg=_("Duplicate Payment Request: Invoice {0} was paid with Integration Request {1}").format(invoice_doc.name, integration_request_existing),
+			title='Error',
+		)
 		return
 
 	cust_fs_acc_number = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
@@ -697,8 +706,17 @@ def add_transfer_fs_credit_bill(bill):
 
 	fs_controller = frappe.get_doc("FS Settings")
 
-	login_res = fs_controller.fapi_login()
-	if login_res["Result"] == "OK":
+	integration_request = None # initialising before the try except statement, as it is referenced in the except clause
+
+	try:
+		# FAPI stage-1
+		login_res = fs_controller.fapi_login()
+		if login_res["Result"] != "OK":
+			frappe.msgprint(
+				msg=login_res["Result"],
+				title='Error',
+			)
+			return
 
 		if fs_controller.production:
 			fs_service_proxy = fs_controller.production_service
@@ -707,6 +725,7 @@ def add_transfer_fs_credit_bill(bill):
 
 		fAmount = invoice_doc.outstanding_amount
 
+		# FAPI stage-2
 		accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(cust_fs_acc_number)
 		if accountMaxAmount_res["Result"] == "OK":
 			#accountMaxAmount = float(accountMaxAmount_res["maxAmount"])
@@ -732,8 +751,13 @@ def add_transfer_fs_credit_bill(bill):
 				strAccountNumberTo = cust_fs_acc_number
 
 		else:
-			frappe.throw(accountMaxAmount_res["Result"])
+			frappe.msgprint(
+				msg=accountMaxAmount_res["Result"],
+				title='Error',
+			)
+			return
 
+		# FAPI stage-3
 		transfer_token = fs_controller.request_transfer_token()
 
 		if transfer_token:
@@ -767,16 +791,15 @@ def add_transfer_fs_credit_bill(bill):
 				"token": transfer_token
 			}
 
-			integration_request = None
-
 			# if exists, fetch the existing integration request for this "Payment Entry" doc
 			for integration_request_existing in frappe.get_all(
 				"Integration Request",
-				filters={"status": "Queued", "integration_request_service": "FS", },
+				#filters={"status": "Queued", "integration_request_service": "FS", },
+				filters={"status": ["in", {"Queued", "Failed"}], "integration_request_service": "FS", },
 				fields=["name", "data"],
 			):
 				data = json.loads(integration_request_existing.data)
-				if data["Payment ID"] == invoice_doc.name :
+				if data["reference_docname"] == invoice_doc.name :
 					integration_request = frappe.get_doc("Integration Request", integration_request_existing)
 					#payment_dict_json = frappe.as_json(payment_dict, indent=1)
 					#frappe.db.set_value("Integration Request", integration_request_existing.name, "data", payment_dict_json)
@@ -790,6 +813,7 @@ def add_transfer_fs_credit_bill(bill):
 			# appending the integration_request name field as Transaction ID in strDescription
 			payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
 
+			# FAPI stage-4
 			addTransfer_res = fs_service_proxy.addTransfer(
 				payment_dict["strAccountNumberFrom"],
 				payment_dict["strAccountNumberTo"],
@@ -835,16 +859,30 @@ def add_transfer_fs_credit_bill(bill):
 				integration_request.status = "Failed"
 				integration_request.save(ignore_permissions=True)
 				frappe.db.commit()
-				frappe.throw(addTransfer_res["Result"])
+				frappe.msgprint(
+					msg=addTransfer_res["Result"],
+					title='Error',
+				)
+				return
 
 		else:
-			frappe.throw("FS transfer token not received")
+			frappe.msgprint(
+				msg="FS transfer token not received",
+				title='Error',
+			)
+			return
 
-	else:
-		frappe.throw(login_res["Result"])
-	
-	return
+	except Exception as err:
+		if integration_request:
+			integration_request.status = "Failed"
+			integration_request.save(ignore_permissions=True)
+			frappe.db.commit()
 
+		frappe.msgprint(
+			msg=str(err),
+			title='Error',
+		)
+		return
 
 
 @frappe.whitelist(allow_guest=True)
