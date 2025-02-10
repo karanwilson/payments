@@ -512,8 +512,13 @@ def add_transfer_sales_order(order):
 
 	fs_controller = frappe.get_doc("FS Settings")
 
-	login_res = fs_controller.fapi_login()
-	if login_res["Result"] == "OK":
+	integration_request = None # initialising before the try except statement, as it is referenced in the except clause
+
+	try:
+		# FAPI stage-1
+		login_res = fs_controller.fapi_login()
+		if login_res["Result"] != "OK":
+			return
 
 		if fs_controller.production:
 			fs_service_proxy = fs_controller.production_service
@@ -522,6 +527,7 @@ def add_transfer_sales_order(order):
 
 		fAmount = order_doc.grand_total - order_doc.advance_paid
 
+		# FAPI stage-2
 		accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(order_doc.custom_fs_account_number)
 		if accountMaxAmount_res["Result"] == "OK":
 			fAmount_float = float(fAmount) # converting to float for math comparisons
@@ -532,126 +538,127 @@ def add_transfer_sales_order(order):
 				strAccountNumberFrom = order_doc.custom_fs_account_number
 				strAccountNumberTo = fs_controller.fs_account
 
-			""" else:
-				# in case of returns, the amount will be a negative value,
-				# hence convert it to postive, and swap the from/to FS account numbers, to make a return transfer
-				fAmount = abs(fAmount_float)
-				#frappe.throw(str(fAmount))
-				strAccountNumberFrom = fs_controller.fs_account
-				strAccountNumberTo = order_doc.custom_fs_account_number """
-
 		else:
 			order_doc.custom_fs_transfer_status = accountMaxAmount_res["Result"]
 			return
 
+		# FAPI stage-3
+		transfer_token = None
 		transfer_token = fs_controller.request_transfer_token()
 
-		if transfer_token:
-			trans_date = order_doc.transaction_date
+		if not transfer_token:
+			return
 
-			match order_doc.company:
-				case "Pour Tous Canteen":
-					strDescription = _("PTC/{0}/{1}").format(trans_date, order_doc.name)
-				case "Pour Tous Purchasing Service":
-					strDescription = _("PTPS/{0}/{1}").format(trans_date, order_doc.name)
-				case _:
-					strDescription = _("{0}/{1}").format(trans_date, order_doc.name)
+		trans_date = order_doc.transaction_date
 
-			payment_dict = {
-				'reference_doctype': order_doc.doctype,
-				'reference_docname': order_doc.name,
-				"Customer Name": order_doc.customer_name,
-				"Customer ID": order_doc.customer,
-				#"Payment Name": "",
-				#"Payment ID": ,
-				"strAccountNumberFrom": strAccountNumberFrom,
-				"strAccountNumberTo": strAccountNumberTo,
-				"fAmount": str(fAmount),
-				# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
-				# string[0:5] extracts the first 4 chars of the string
-				"strDescription": strDescription,
-				"check": "Yes",
-				"token": transfer_token
-			}
+		match order_doc.company:
+			case "Pour Tous Canteen":
+				strDescription = _("PTC/{0}/{1}").format(trans_date, order_doc.name)
+			case "Pour Tous Purchasing Service":
+				strDescription = _("PTPS/{0}/{1}").format(trans_date, order_doc.name)
+			case _:
+				strDescription = _("{0}/{1}").format(trans_date, order_doc.name)
 
-			integration_request = None
+		payment_dict = {
+			'reference_doctype': order_doc.doctype,
+			'reference_docname': order_doc.name,
+			"Customer Name": order_doc.customer_name,
+			"Customer ID": order_doc.customer,
+			#"Payment Name": "",
+			#"Payment ID": ,
+			"strAccountNumberFrom": strAccountNumberFrom,
+			"strAccountNumberTo": strAccountNumberTo,
+			"fAmount": str(fAmount),
+			# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
+			# string[0:5] extracts the first 4 chars of the string
+			"strDescription": strDescription,
+			"check": "Yes",
+			"token": transfer_token
+		}
 
-			# if exists, fetch the existing integration request for this "Payment Entry" doc
-			for integration_request_existing in frappe.get_all(
-				"Integration Request",
-				filters={"status": "Queued", "integration_request_service": "FS", },
-				fields=["name", "data"],
-			):
-				data = json.loads(integration_request_existing.data)
-				if data["Payment ID"] == order_doc.name :
-					integration_request = frappe.get_doc("Integration Request", integration_request_existing)
-					#payment_dict_json = frappe.as_json(payment_dict, indent=1)
-					#frappe.db.set_value("Integration Request", integration_request_existing.name, "data", payment_dict_json)
-					break
+		# if exists, fetch the existing integration request for this "Payment Entry" doc
+		for integration_request_existing in frappe.get_all(
+			"Integration Request",
+			filters={"status": "Queued", "integration_request_service": "FS", },
+			fields=["name", "data"],
+		):
+			data = json.loads(integration_request_existing.data)
+			if data["Payment ID"] == order_doc.name :
+				integration_request = frappe.get_doc("Integration Request", integration_request_existing)
+				#payment_dict_json = frappe.as_json(payment_dict, indent=1)
+				#frappe.db.set_value("Integration Request", integration_request_existing.name, "data", payment_dict_json)
+				break
 
-			# Create an "Integration Request" in case of a fresh transfer
-			if not integration_request:
-				# Create integration log
-				integration_request = create_request_log(payment_dict, service_name="FS")
+		# Create an "Integration Request" in case of a fresh transfer
+		if not integration_request:
+			# Create integration log
+			integration_request = create_request_log(payment_dict, service_name="FS")
 
-			# appending the integration_request name field as Transaction ID in strDescription
-			payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
+		# appending the integration_request name field as Transaction ID in strDescription
+		payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
 
-			addTransfer_res = fs_service_proxy.addTransfer(
-				payment_dict["strAccountNumberFrom"],
-				payment_dict["strAccountNumberTo"],
-				payment_dict["fAmount"],
-				payment_dict["strDescription"],
-				payment_dict["check"],
-				payment_dict["token"]
+		# FAPI stage-4
+		addTransfer_res = fs_service_proxy.addTransfer(
+			payment_dict["strAccountNumberFrom"],
+			payment_dict["strAccountNumberTo"],
+			payment_dict["fAmount"],
+			payment_dict["strDescription"],
+			payment_dict["check"],
+			payment_dict["token"]
+		)
+
+		if addTransfer_res["Result"] == "OK":
+			integration_request.status = "Completed"
+			integration_request.save(ignore_permissions=True)
+			#frappe.db.commit()
+
+			order_doc.custom_fs_transfer_status = addTransfer_res["Result"]
+			order_doc.save()
+
+			# If FS transfer was successful,
+			# then create a Payment Entry and reconcile with the Sales Invoice
+
+			bank_account = get_bank_cash_account("FS", order_doc.company)
+
+			pe = get_payment_entry(
+				dt = order_doc.doctype,
+				dn = order_doc.name,
+				bank_account = bank_account["account"],
 			)
+			pe.mode_of_payment = "FS"
+			pe.reference_no = payment_dict["strDescription"]
+			#pe.reference_date = nowdate()
+			#pe.paid_amount = pe.received_amount = fAmount
+			pe.custom_fs_transfer_status = addTransfer_res["Result"]
+			pe.custom_remarks = 1
+			pe.remarks = addTransfer_res["Message"]
 
-			if addTransfer_res["Result"] == "OK":
-				integration_request.status = "Completed"
-				integration_request.save(ignore_permissions=True)
-				#frappe.db.commit()
+			pe.insert(ignore_permissions=True)
+			pe.submit()
+			frappe.db.commit()
 
-				order_doc.custom_fs_transfer_status = addTransfer_res["Result"]
-				order_doc.save()
-
-				# If FS transfer was successful,
-				# then create a Payment Entry and reconcile with the Sales Invoice
-
-				bank_account = get_bank_cash_account("FS", order_doc.company)
-
-				pe = get_payment_entry(
-					dt = order_doc.doctype,
-					dn = order_doc.name,
-					bank_account = bank_account["account"],
-				)
-				pe.mode_of_payment = "FS"
-				pe.reference_no = payment_dict["strDescription"]
-				#pe.reference_date = nowdate()
-				#pe.paid_amount = pe.received_amount = fAmount
-				pe.custom_fs_transfer_status = addTransfer_res["Result"]
-				pe.custom_remarks = 1
-				pe.remarks = addTransfer_res["Message"]
-
-				pe.insert(ignore_permissions=True)
-				pe.submit()
-				frappe.db.commit()
-
-				return addTransfer_res["Result"]
-
-			else:
-				integration_request.status = "Failed"
-				integration_request.save(ignore_permissions=True)
-				order_doc.custom_fs_transfer_status = addTransfer_res["Result"]
-				order_doc.save()
-
-				frappe.db.commit()
-				#frappe.throw(addTransfer_res["Result"])
+			return addTransfer_res["Result"]
 
 		else:
-			frappe.throw("FS transfer token not received")
+			integration_request.status = "Failed"
+			integration_request.save(ignore_permissions=True)
+			order_doc.custom_fs_transfer_status = addTransfer_res["Result"]
+			order_doc.save()
 
-	else:
-		frappe.throw(login_res["Result"])
+			frappe.db.commit()
+			#frappe.throw(addTransfer_res["Result"])
+
+	except Exception as err:
+		if integration_request:
+			integration_request.status = "Failed"
+			integration_request.save(ignore_permissions=True)
+			frappe.db.commit()
+
+		frappe.msgprint(
+			msg=str(err),
+			title='Error',
+		)
+		return
 	
 	return
 
