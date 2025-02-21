@@ -462,10 +462,11 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 			integration_request.save(ignore_permissions=True)
 			frappe.db.commit()
 
-		return {
+		raise err
+		""" return {
 			"custom_fs_transfer_status": err,
 			"remarks": "Null"
-		}
+		} """
 
 
 @frappe.whitelist(allow_guest=True)
