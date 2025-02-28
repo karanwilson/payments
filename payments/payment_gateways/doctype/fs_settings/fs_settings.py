@@ -236,7 +236,7 @@ def add_transfer_contribution(doc, method):
 					"strAccountNumberTo": fs_controller.fs_account,
 					"fAmount": str(doc.paid_amount),
 					# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
-					# string[0:5] extracts the first 4 chars of the string
+					# string[0:5] extracts the first 5 chars of the string
 					"strDescription": _("PTDC/{0}.CON/{1}").format((doc.custom_contribution_type)[0:5], (doc.name)[4:]),
 					"check": "Yes",
 					"token": transfer_token
@@ -396,7 +396,7 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 			"strAccountNumberTo": strAccountNumberTo,
 			"fAmount": str(fAmount),
 			# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
-			# string[0:5] extracts the first 4 chars of the string
+			# string[0:5] extracts the first 5 chars of the string
 			"strDescription": strDescription,
 			"check": "Yes",
 			"token": transfer_token
@@ -575,7 +575,7 @@ def add_transfer_sales_order(order):
 			"strAccountNumberTo": strAccountNumberTo,
 			"fAmount": str(fAmount),
 			# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
-			# string[0:5] extracts the first 4 chars of the string
+			# string[0:5] extracts the first 5 chars of the string
 			"strDescription": strDescription,
 			"check": "Yes",
 			"token": transfer_token
@@ -786,7 +786,7 @@ def add_transfer_fs_credit_bill(bill):
 				"strAccountNumberTo": strAccountNumberTo,
 				"fAmount": str(fAmount),
 				# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
-				# string[0:5] extracts the first 4 chars of the string
+				# string[0:5] extracts the first 5 chars of the string
 				"strDescription": strDescription,
 				"check": "Yes",
 				"token": transfer_token
@@ -985,7 +985,7 @@ def add_transfer_fs_draft_bills():
 						"strAccountNumberTo": strAccountNumberTo,
 						"fAmount": str(fAmount),
 						# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
-						# string[0:5] extracts the first 4 chars of the string
+						# string[0:5] extracts the first 5 chars of the string
 						"strDescription": strDescription,
 						"check": "Yes",
 						"token": transfer_token
@@ -1160,7 +1160,7 @@ def add_transfer_exception_fs_credit_bill(bill):
 				"strAccountNumberTo": strAccountNumberTo,
 				"fAmount": str(fAmount),
 				# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
-				# string[0:5] extracts the first 4 chars of the string
+				# string[0:5] extracts the first 5 chars of the string
 				"strDescription": strDescription,
 				"check": "Yes",
 				"token": transfer_token
