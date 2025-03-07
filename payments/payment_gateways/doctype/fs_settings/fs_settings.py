@@ -20,6 +20,8 @@ from Crypto.Cipher import AES
 import datetime
 from datetime import datetime
 
+from phpserialize3 import *
+
 
 class FSSettings(Document):
 	supported_currencies = ["INR"]
@@ -144,15 +146,25 @@ def fetch_fs_accounts_detail():
 		accountsRange = fs_controller.fetch_fs_accounts_data()
 		#frappe.throw(str(accountsRange))
 
+		accounts_dict = loads(accountsRange["Accounts"])
+
+		with open('parsedFSaccounts.json', 'a') as file:
+			for i in range(50):
+				file.writelines(accounts_dict['R'+i+'_Number']+': '+accounts_dict['R'+i+'_Name']+': '+accounts_dict['R'+i+'_Disable']+'\n')
+
+		""" with open('loadFSaccounts.json', 'w') as file:
+			file.write(str(accounts_dict))
+
 		with open('loadFSaccounts.txt', 'w') as file:
-			file.write(str(accountsRange))
+			file.write(str(accountsRange)) """
 
 		#if accountsRange["Result"] == "OK":
-		return {
+		return
+		""" {
 			"Result": accountsRange["Result"],
 			"RecordCount": accountsRange["RecordCount"],
 			"Accounts": accountsRange["Accounts"]
-		}
+		} """
 
 
 @frappe.whitelist(allow_guest=True)
