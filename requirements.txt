@@ -4,3 +4,4 @@ razorpay~=1.2.0
 stripe~=2.56.0
 braintree~=4.20.0
 zeep~=4.2.1
+phpserialize3~=0.1.4
