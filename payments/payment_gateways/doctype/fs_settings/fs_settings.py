@@ -144,27 +144,23 @@ def fetch_fs_accounts_detail():
 
 	if login_res["Result"] == "OK":
 		accountsRange = fs_controller.fetch_fs_accounts_data()
-		#frappe.throw(str(accountsRange))
 
-		accounts_dict = loads(accountsRange["Accounts"])
+		if accountsRange["Result"] == 'OK':
 
-		with open('parsedFSaccounts.json', 'a') as file:
-			for i in range(50):
-				file.writelines(accounts_dict['R'+i+'_Number']+': '+accounts_dict['R'+i+'_Name']+': '+accounts_dict['R'+i+'_Disable']+'\n')
+			# deserializing the PHP response
+			accounts_dict = loads(accountsRange["Accounts"])
 
-		""" with open('loadFSaccounts.json', 'w') as file:
-			file.write(str(accounts_dict))
+			# storing in files for reference
+			with open('loadFSaccounts.txt', 'w') as file:
+				file.write(str(accountsRange))
+			with open('loadFSaccounts.json', 'w') as file:
+				file.write(str(accounts_dict))
 
-		with open('loadFSaccounts.txt', 'w') as file:
-			file.write(str(accountsRange)) """
-
-		#if accountsRange["Result"] == "OK":
-		return
-		""" {
-			"Result": accountsRange["Result"],
-			"RecordCount": accountsRange["RecordCount"],
-			"Accounts": accountsRange["Accounts"]
-		} """
+			return {
+				"Result": accountsRange["Result"],
+				"RecordCount": accountsRange["RecordCount"],
+				"Accounts": accounts_dict
+			}
 
 
 @frappe.whitelist(allow_guest=True)
