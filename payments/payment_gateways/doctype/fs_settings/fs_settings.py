@@ -163,7 +163,7 @@ def fetch_fs_accounts_detail():
 			}
 
 
-@frappe.whitelist(allow_guest=True)
+""" @frappe.whitelist(allow_guest=True)
 def update_fs_accounts_doctype():
 	fs_controller = frappe.get_doc("FS Settings")
 	login_res = fs_controller.fapi_login()
@@ -183,12 +183,7 @@ def update_fs_accounts_doctype():
 				fs_account.account_number = 1
 				fs_account.account_name = 2
 				fs_account.account_type = 3
-				fs_account.disabled = 4
-
-			""" res["Accounts"] = json.loads(accountsRange["Accounts"])
-
-			with open('accountsRange.txt', 'w') as file:
-				file.write(str(accountsRange)) """
+				fs_account.disabled = 4 """
 
 
 @frappe.whitelist(allow_guest=True)
