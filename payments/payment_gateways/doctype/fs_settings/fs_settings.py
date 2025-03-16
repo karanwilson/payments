@@ -161,6 +161,9 @@ def fetch_fs_accounts_detail():
 				"RecordCount": accountsRange["RecordCount"],
 				"Accounts": accounts_dict
 			}
+		
+		else:
+			frappe.msgprint(str(accountsRange))
 
 
 @frappe.whitelist(allow_guest=True)
