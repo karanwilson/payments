@@ -476,7 +476,8 @@ def add_transfer_sales_order(order):
 	order_doc = frappe.get_doc("Sales Order", order)
 	#cust_fs_acc_number = frappe.get_value("Customer", order_doc.customer, "custom_fs_account_number")
 	if not order_doc.custom_fs_account_number:
-		frappe.throw(str(order_doc.customer))
+		return
+		#frappe.throw(str(order_doc.customer))
 
 	# if exists, fetch the existing integration request
 	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": order_doc.name}, "name")
