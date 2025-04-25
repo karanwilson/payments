@@ -465,6 +465,7 @@ def fetch_unpaid_sales_orders():
 			AND ifnull(status, "") != "Closed"
 			AND grand_total > advance_paid
 			AND abs(100 - per_billed) > 0.01
+			AND custom_fs_account_number IS NOT NULL
 		ORDER BY
 			transaction_date, name
 	    """,
