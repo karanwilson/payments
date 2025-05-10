@@ -465,11 +465,11 @@ def fetch_unpaid_sales_orders():
 			AND ifnull(status, "") != "Closed"
 			AND grand_total > advance_paid
 			AND abs(100 - per_billed) > 0.01
-			AND custom_fs_account_number IS NOT NULL
 		ORDER BY
 			transaction_date, name
 	    """,
         #as_dict=1,
+		#AND custom_fs_account_number IS NOT NULL
     )
 
 @frappe.whitelist(allow_guest=True)
@@ -477,8 +477,57 @@ def add_transfer_sales_order(order):
 	order_doc = frappe.get_doc("Sales Order", order)
 	#cust_fs_acc_number = frappe.get_value("Customer", order_doc.customer, "custom_fs_account_number")
 	if not order_doc.custom_fs_account_number:
-		return
 		#frappe.throw(str(order_doc.customer))
+		customer_group = frappe.get_value("Customer", order_doc.customer, "customer_group")
+
+		if customer_group == "Aurocard Payments":
+			bank_account = get_bank_cash_account("Aurocard", order_doc.company)
+
+			pe = get_payment_entry(
+				dt = order_doc.doctype,
+				dn = order_doc.name,
+				bank_account = bank_account["account"],
+			)
+			pe.mode_of_payment = "Aurocard"
+			if order_doc.custom_remarks:
+				pe.reference_no = order_doc.custom_remarks
+			else:
+				pe.reference_no = "Not recorded, please check the bank/FS statements"
+			#pe.reference_date = nowdate()
+			#pe.paid_amount = pe.received_amount = fAmount
+			#pe.custom_fs_transfer_status = addTransfer_res["Result"]
+			pe.custom_remarks = 1
+			pe.remarks = order_doc.custom_remarks
+
+			pe.insert(ignore_permissions=True)
+			pe.submit()
+			frappe.db.commit()
+			return { "OK" }
+
+		elif customer_group == "UPI Payments":
+			bank_account = get_bank_cash_account("UPI", order_doc.company)
+
+			pe = get_payment_entry(
+				dt = order_doc.doctype,
+				dn = order_doc.name,
+				bank_account = bank_account["account"],
+			)
+			pe.mode_of_payment = "UPI"
+			if order_doc.custom_remarks:
+				pe.reference_no = order_doc.custom_remarks
+			else:
+				pe.reference_no = "Not recorded, please check the bank/FS statements"
+			#pe.reference_date = nowdate()
+			#pe.paid_amount = pe.received_amount = fAmount
+			#pe.custom_fs_transfer_status = addTransfer_res["Result"]
+			pe.custom_remarks = 1
+			pe.remarks = order_doc.custom_remarks
+
+			pe.insert(ignore_permissions=True)
+			pe.submit()
+			frappe.db.commit()
+			return { "OK" }
+
 
 	# if exists, fetch the existing integration request
 	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": order_doc.name}, "name")
