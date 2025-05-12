@@ -528,6 +528,54 @@ def add_transfer_sales_order(order):
 			frappe.db.commit()
 			return { "OK" }
 
+		elif customer_group == "Card Payments":
+			bank_account = get_bank_cash_account("Cards", order_doc.company)
+
+			pe = get_payment_entry(
+				dt = order_doc.doctype,
+				dn = order_doc.name,
+				bank_account = bank_account["account"],
+			)
+			pe.mode_of_payment = "Cards"
+			if order_doc.custom_remarks:
+				pe.reference_no = order_doc.custom_remarks
+			else:
+				pe.reference_no = "Not recorded, please check the bank/FS statements"
+			#pe.reference_date = nowdate()
+			#pe.paid_amount = pe.received_amount = fAmount
+			#pe.custom_fs_transfer_status = addTransfer_res["Result"]
+			pe.custom_remarks = 1
+			pe.remarks = order_doc.custom_remarks
+
+			pe.insert(ignore_permissions=True)
+			pe.submit()
+			frappe.db.commit()
+			return { "OK" }
+
+		elif customer_group == "Cash":
+			bank_account = get_bank_cash_account("Cash", order_doc.company)
+
+			pe = get_payment_entry(
+				dt = order_doc.doctype,
+				dn = order_doc.name,
+				bank_account = bank_account["account"],
+			)
+			pe.mode_of_payment = "Cash"
+			if order_doc.custom_remarks:
+				pe.reference_no = order_doc.custom_remarks
+			else:
+				pe.reference_no = "Not recorded, please check the bank/FS statements"
+			#pe.reference_date = nowdate()
+			#pe.paid_amount = pe.received_amount = fAmount
+			#pe.custom_fs_transfer_status = addTransfer_res["Result"]
+			pe.custom_remarks = 1
+			pe.remarks = order_doc.custom_remarks
+
+			pe.insert(ignore_permissions=True)
+			pe.submit()
+			frappe.db.commit()
+			return { "OK" }
+
 
 	# if exists, fetch the existing integration request
 	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": order_doc.name}, "name")
