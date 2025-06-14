@@ -774,7 +774,7 @@ def fetch_fs_credit_bills():
 		SELECT name
 		FROM `tabSales Invoice`
 		WHERE docstatus = 1 AND status IN ("Unpaid", "Overdue", "Return")
-		AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "ERR101: Account number (to) '0373' is invalid.");
+		AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "Failed", "ERR101: Account number (to) '0373' is invalid.");
 	    """,
         #as_dict=1,
     )
@@ -787,7 +787,14 @@ def add_transfer_fs_credit_bill(bill):
 	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_doc.name}, "name")
 	if integration_request_existing:
 		int_req_doc = frappe.get_doc("Integration Request", integration_request_existing)
-		if int_req_doc.status == 'Completed':
+		status_msg = int_req_doc.name + ": check FS tx status"
+
+		invoice_doc.custom_fs_transfer_status = status_msg
+		invoice_doc.save()
+		frappe.db.commit()
+		return
+
+		""" if int_req_doc.status == 'Completed':
 			frappe.msgprint(
 				msg=_("Duplicate Payment Request: Invoice {0} was paid with Integration Request {1}").format(invoice_doc.name, integration_request_existing),
 				title='Error',
@@ -796,8 +803,7 @@ def add_transfer_fs_credit_bill(bill):
 			invoice_doc.custom_fs_transfer_status = int_req_doc.status
 			invoice_doc.save()
 			frappe.db.commit()
-
-		return
+		return """
 
 	cust_fs_acc_number = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
 	if not cust_fs_acc_number:
@@ -833,6 +839,9 @@ def add_transfer_fs_credit_bill(bill):
 			fAmount_float = float(fAmount) # converting to float in order to do check for negative amounts below
 			if fAmount_float > 0:
 				if fAmount_float > float(accountMaxAmount_res["maxAmount"]):
+					invoice_doc.custom_fs_transfer_status = "Insufficient Funds"
+					invoice_doc.save()
+					frappe.db.commit()
 					return
 					# for incremental debits in case of insufficent funds for the full outstanding amount
 					#fAmount = float(accountMaxAmount_res["maxAmount"])
