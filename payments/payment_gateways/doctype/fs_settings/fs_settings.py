@@ -21,6 +21,7 @@ import datetime
 from datetime import datetime
 
 from phpserialize3 import *
+#import os
 
 
 class FSSettings(Document):
@@ -89,6 +90,14 @@ class FSSettings(Document):
 		
 		#token_int = int(transfer_token)
 		#token_type = type(token_int)
+
+		""" if os.path.exists('tax_cess.txt'):
+			append_write = 'a' # append if already exists
+		else:
+			append_write = 'w' # make a new file if not
+		with open('tax_cess.txt', append_write) as file:
+			file.write() """
+
 		#with open('fapi_token9.txt', 'w') as file:
 		#	file.write(str(token_type))
 		#with open('fapi_token2.txt', 'w') as fp:
