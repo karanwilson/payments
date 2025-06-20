@@ -764,7 +764,7 @@ def fetch_fs_credit_bills():
     	"""
 		SELECT name
 		FROM `tabSales Invoice`
-		WHERE docstatus = 1 AND status IN ("Unpaid", "Overdue", "Return")
+		WHERE docstatus = 1 AND status IN ("Unpaid", "Overdue", "Partly Paid", "Return")
 		AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "Failed", "ERR101: Account number (to) '0373' is invalid.");
 	    """,
         #as_dict=1,
