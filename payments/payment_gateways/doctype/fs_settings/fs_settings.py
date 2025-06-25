@@ -486,6 +486,33 @@ def fetch_unpaid_sales_orders():
 @frappe.whitelist(allow_guest=True)
 def add_transfer_sales_order(order):
 	order_doc = frappe.get_doc("Sales Order", order)
+
+	if order_doc.custom_is_donation:
+		bank_account = get_bank_cash_account("Donations", order_doc.company)
+
+		pe = get_payment_entry(
+			dt = order_doc.doctype,
+			dn = order_doc.name,
+			bank_account = bank_account["account"],
+		)
+
+		pe.mode_of_payment = "Donations"
+
+		if order_doc.custom_remarks:
+			pe.reference_no = order_doc.custom_remarks
+		else:
+			pe.reference_no = "Donation"
+		#pe.reference_date = nowdate()
+		#pe.paid_amount = pe.received_amount = fAmount
+		#pe.custom_fs_transfer_status = addTransfer_res["Result"]
+		pe.custom_remarks = 1
+		pe.remarks = order_doc.custom_remarks
+
+		pe.insert(ignore_permissions=True)
+		pe.submit()
+		frappe.db.commit()
+		return { "OK" }
+
 	#cust_fs_acc_number = frappe.get_value("Customer", order_doc.customer, "custom_fs_account_number")
 	if not order_doc.custom_fs_account_number:
 		#frappe.throw(str(order_doc.customer))
@@ -563,7 +590,7 @@ def add_transfer_sales_order(order):
 			frappe.db.commit()
 			return { "OK" }
 
-		elif customer_group == "Cash":
+		elif customer_group == "Cash Payments":
 			bank_account = get_bank_cash_account("Cash", order_doc.company)
 
 			pe = get_payment_entry(
@@ -572,6 +599,30 @@ def add_transfer_sales_order(order):
 				bank_account = bank_account["account"],
 			)
 			pe.mode_of_payment = "Cash"
+			if order_doc.custom_remarks:
+				pe.reference_no = order_doc.custom_remarks
+			else:
+				pe.reference_no = "Not recorded, please check the bank/FS statements"
+			#pe.reference_date = nowdate()
+			#pe.paid_amount = pe.received_amount = fAmount
+			#pe.custom_fs_transfer_status = addTransfer_res["Result"]
+			pe.custom_remarks = 1
+			pe.remarks = order_doc.custom_remarks
+
+			pe.insert(ignore_permissions=True)
+			pe.submit()
+			frappe.db.commit()
+			return { "OK" }
+
+		elif customer_group == "NEFT Payments":
+			bank_account = get_bank_cash_account("NEFT", order_doc.company)
+
+			pe = get_payment_entry(
+				dt = order_doc.doctype,
+				dn = order_doc.name,
+				bank_account = bank_account["account"],
+			)
+			pe.mode_of_payment = "NEFT"
 			if order_doc.custom_remarks:
 				pe.reference_no = order_doc.custom_remarks
 			else:
