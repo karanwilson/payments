@@ -297,6 +297,116 @@ def add_transfer_contribution(doc, method):
 	return
 
 
+def refund_fs_payments(doc, method):
+	if doc.mode_of_payment == "FS":
+		integration_request = None
+
+		integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": doc.name}, "name")
+		if integration_request_existing:
+			integration_request = frappe.get_doc("Integration Request", integration_request_existing)
+			if integration_request.status == "Completed":
+				frappe.msgprint("Integration Request Exists!")
+				return
+
+		fs_controller = frappe.get_doc("FS Settings")
+		if fs_controller.production:
+			fs_service_proxy = fs_controller.production_service
+		else:
+			fs_service_proxy = fs_controller.staging_service
+
+		try:
+			# FAPI stage-1
+			login_res = fs_controller.fapi_login()
+			if login_res["Result"] != "OK":
+				frappe.msgprint(login_res["Result"])
+				return
+
+			# FAPI stage-2
+			transfer_token = None
+			transfer_token = fs_controller.request_transfer_token()
+			if not transfer_token:
+				frappe.msgprint("FS transfer token not received")
+				return
+
+			fAmount = doc.paid_amount
+
+			strAccountNumberFrom = fs_controller.fs_account
+			strAccountNumberTo = frappe.get_value("Customer", doc.party, "custom_fs_account_number")
+
+			trans_date = nowdate()
+
+			match doc.company:
+				case "Pour Tous Canteen":
+					strDescription = _("PTC/{0}/{1}").format(trans_date, doc.name)
+				case "Pour Tous Purchasing Service":
+					strDescription = _("PTPS/{0}/{1}").format(trans_date, doc.name)
+				case "Auroville Bakery":
+					strDescription = _("AVBK/{0}/{1}").format(trans_date, doc.name)
+				case "AV Bakery Cafe":
+					strDescription = _("AVBC/{0}/{1}").format(trans_date, doc.name)
+				case _:
+					strDescription = _("{0}/{1}").format(trans_date, doc.name)
+
+			payment_dict = {
+				'reference_doctype': doc.doctype,
+				'reference_docname': doc.name,
+				"Customer Name": doc.party_name,
+				"Customer ID": doc.party,
+				"strAccountNumberFrom": strAccountNumberFrom,
+				"strAccountNumberTo": strAccountNumberTo,
+				"fAmount": str(fAmount),
+				# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
+				# string[0:5] extracts the first 5 chars of the string
+				"strDescription": strDescription,
+				"check": "Yes",
+				"token": transfer_token
+			}
+
+			#with open('fapi.txt', 'w') as file:
+			#	file.write(str())
+
+			# Create integration log
+			integration_request = create_request_log(payment_dict, service_name="FS")
+
+			# appending the integration_request name field as Transaction ID in strDescription
+			payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
+
+			# FAPI stage-3
+			addTransfer_res = fs_service_proxy.addTransfer(
+				payment_dict["strAccountNumberFrom"],
+				payment_dict["strAccountNumberTo"],
+				payment_dict["fAmount"],
+				payment_dict["strDescription"],
+				payment_dict["check"],
+				payment_dict["token"]
+			)
+
+			if addTransfer_res["Result"] == "OK":
+				payment_dict["fs_transfer_response"] = addTransfer_res["Message"]
+
+				payment_dict_json = frappe.as_json(payment_dict, indent=1)
+				integration_request.data = payment_dict_json
+
+				integration_request.status = "Completed"
+				integration_request.save(ignore_permissions=True)
+
+			else:
+				integration_request.status = "Failed"
+				integration_request.save(ignore_permissions=True)
+
+			frappe.db.commit()
+			frappe.msgprint(addTransfer_res["Result"])
+			return
+
+		except Exception as err:
+			if integration_request:
+				integration_request.status = "Failed"
+				integration_request.save(ignore_permissions=True)
+				frappe.db.commit()
+
+			raise err
+
+
 @frappe.whitelist(allow_guest=True)
 def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 	invoice_dict = json.loads(invoice_doc)
@@ -376,6 +486,8 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 				strDescription = _("PTPS/{0}/{1}").format(trans_date, invoice_dict["name"])
 			case "Auroville Bakery":
 				strDescription = _("AVBK/{0}/{1}").format(trans_date, invoice_dict["name"])
+			case "AV Bakery Cafe":
+				strDescription = _("AVBC/{0}/{1}").format(trans_date, invoice_dict["name"])
 			case _:
 				strDescription = _("{0}/{1}").format(trans_date, invoice_dict["name"])
 
@@ -466,6 +578,7 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 
 @frappe.whitelist(allow_guest=True)
 def fetch_unpaid_sales_orders():
+	today = nowdate()
 	return frappe.db.sql(
     	"""
 		SELECT name FROM `tabSales Order`
@@ -474,9 +587,10 @@ def fetch_unpaid_sales_orders():
 			AND ifnull(status, "") != "Closed"
 			AND grand_total > advance_paid
 			AND abs(100 - per_billed) > 0.01
+			AND delivery_date <= '{0}'
 		ORDER BY
 			transaction_date, name
-	    """,
+	    """.format(today),
         #as_dict=1,
 		#AND custom_fs_account_number IS NOT NULL
     )
@@ -484,6 +598,34 @@ def fetch_unpaid_sales_orders():
 @frappe.whitelist(allow_guest=True)
 def add_transfer_sales_order(order):
 	order_doc = frappe.get_doc("Sales Order", order)
+
+	if order_doc.custom_is_donation:
+		bank_account = get_bank_cash_account("Donations", order_doc.company)
+
+		pe = get_payment_entry(
+			dt = order_doc.doctype,
+			dn = order_doc.name,
+			bank_account = bank_account["account"],
+		)
+
+		pe.mode_of_payment = "Donations"
+
+		if order_doc.custom_remarks:
+			pe.reference_no = order_doc.custom_remarks
+		else:
+			pe.reference_no = "Donation"
+		#pe.reference_date = nowdate()
+		#pe.paid_amount = pe.received_amount = fAmount
+		#pe.custom_fs_transfer_status = addTransfer_res["Result"]
+		pe.cost_center = "Main - AB"
+		pe.custom_remarks = 1
+		pe.remarks = order_doc.custom_remarks
+
+		pe.insert(ignore_permissions=True)
+		pe.submit()
+		frappe.db.commit()
+		return { "OK" }
+
 	#cust_fs_acc_number = frappe.get_value("Customer", order_doc.customer, "custom_fs_account_number")
 	if not order_doc.custom_fs_account_number:
 		#frappe.throw(str(order_doc.customer))
@@ -561,7 +703,7 @@ def add_transfer_sales_order(order):
 			frappe.db.commit()
 			return { "OK" }
 
-		elif customer_group == "Cash":
+		elif customer_group == "Cash Payments":
 			bank_account = get_bank_cash_account("Cash", order_doc.company)
 
 			pe = get_payment_entry(
@@ -570,6 +712,30 @@ def add_transfer_sales_order(order):
 				bank_account = bank_account["account"],
 			)
 			pe.mode_of_payment = "Cash"
+			if order_doc.custom_remarks:
+				pe.reference_no = order_doc.custom_remarks
+			else:
+				pe.reference_no = "Not recorded, please check the bank/FS statements"
+			#pe.reference_date = nowdate()
+			#pe.paid_amount = pe.received_amount = fAmount
+			#pe.custom_fs_transfer_status = addTransfer_res["Result"]
+			pe.custom_remarks = 1
+			pe.remarks = order_doc.custom_remarks
+
+			pe.insert(ignore_permissions=True)
+			pe.submit()
+			frappe.db.commit()
+			return { "OK" }
+
+		elif customer_group == "NEFT Payments":
+			bank_account = get_bank_cash_account("NEFT", order_doc.company)
+
+			pe = get_payment_entry(
+				dt = order_doc.doctype,
+				dn = order_doc.name,
+				bank_account = bank_account["account"],
+			)
+			pe.mode_of_payment = "NEFT"
 			if order_doc.custom_remarks:
 				pe.reference_no = order_doc.custom_remarks
 			else:
@@ -650,6 +816,8 @@ def add_transfer_sales_order(order):
 				strDescription = _("PTPS/{0}/{1}").format(trans_date, order_doc.name)
 			case "Auroville Bakery":
 				strDescription = _("AVBK/{0}/{1}").format(trans_date, order_doc.name)
+			case "AV Bakery Cafe":
+				strDescription = _("AVBC/{0}/{1}").format(trans_date, order_doc.name)
 			case _:
 				strDescription = _("{0}/{1}").format(trans_date, order_doc.name)
 
@@ -881,6 +1049,8 @@ def add_transfer_fs_credit_bill(bill):
 					strDescription = _("PTPS/{0}/{1}").format(trans_date, invoice_doc.name)
 				case "Auroville Bakery":
 					strDescription = _("AVBK/{0}/{1}").format(trans_date, invoice_doc.name)
+				case "AV Bakery Cafe":
+					strDescription = _("AVBC/{0}/{1}").format(trans_date, invoice_doc.name)
 				case _:
 					strDescription = _("{0}/{1}").format(trans_date, invoice_doc.name)
 
