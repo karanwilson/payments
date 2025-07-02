@@ -774,7 +774,7 @@ def fetch_fs_credit_bills():
 		SELECT name
 		FROM `tabSales Invoice`
 		WHERE docstatus = 1 AND status IN ("Unpaid", "Overdue", "Partly Paid", "Return")
-		AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "Failed", "ERR101: Account number (to) '0373' is invalid.");
+		AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "Retry-Payment", "Failed", "ERR101: Account number (to) '0373' is invalid.");
 	    """,
         #as_dict=1,
     )
@@ -785,7 +785,7 @@ def add_transfer_fs_credit_bill(bill):
 
 	# if exists, fetch the existing integration request
 	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_doc.name}, "name")
-	if integration_request_existing:
+	if integration_request_existing and invoice_doc.custom_fs_transfer_status != "Retry-Payment":
 		int_req_doc = frappe.get_doc("Integration Request", integration_request_existing)
 		status_msg = int_req_doc.name + ": check FS tx status"
 
