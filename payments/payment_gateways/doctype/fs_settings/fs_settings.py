@@ -344,6 +344,8 @@ def refund_fs_payments(doc, method):
 					strDescription = _("AVBK/{0}/{1}").format(trans_date, doc.name)
 				case "AV Bakery Cafe":
 					strDescription = _("AVBC/{0}/{1}").format(trans_date, doc.name)
+				case "AV Bakery Cafe Townhall":
+					strDescription = _("ABCT/{0}/{1}").format(trans_date, doc.name)
 				case _:
 					strDescription = _("{0}/{1}").format(trans_date, doc.name)
 
@@ -488,6 +490,8 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 				strDescription = _("AVBK/{0}/{1}").format(trans_date, invoice_dict["name"])
 			case "AV Bakery Cafe":
 				strDescription = _("AVBC/{0}/{1}").format(trans_date, invoice_dict["name"])
+			case "AV Bakery Cafe Townhall":
+				strDescription = _("ABCT/{0}/{1}").format(trans_date, invoice_dict["name"])
 			case _:
 				strDescription = _("{0}/{1}").format(trans_date, invoice_dict["name"])
 
@@ -818,6 +822,8 @@ def add_transfer_sales_order(order):
 				strDescription = _("AVBK/{0}/{1}").format(trans_date, order_doc.name)
 			case "AV Bakery Cafe":
 				strDescription = _("AVBC/{0}/{1}").format(trans_date, order_doc.name)
+			case "AV Bakery Cafe Townhall":
+				strDescription = _("ABCT/{0}/{1}").format(trans_date, order_doc.name)
 			case _:
 				strDescription = _("{0}/{1}").format(trans_date, order_doc.name)
 
@@ -1051,6 +1057,8 @@ def add_transfer_fs_credit_bill(bill):
 					strDescription = _("AVBK/{0}/{1}").format(trans_date, invoice_doc.name)
 				case "AV Bakery Cafe":
 					strDescription = _("AVBC/{0}/{1}").format(trans_date, invoice_doc.name)
+				case "AV Bakery Cafe Townhall":
+					strDescription = _("ABCT/{0}/{1}").format(trans_date, doc.name)
 				case _:
 					strDescription = _("{0}/{1}").format(trans_date, invoice_doc.name)
 
