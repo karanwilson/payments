@@ -583,21 +583,40 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 @frappe.whitelist(allow_guest=True)
 def fetch_unpaid_sales_orders():
 	today = nowdate()
-	return frappe.db.sql(
-    	"""
-		SELECT name FROM `tabSales Order`
-		WHERE
-			docstatus = 1
-			AND ifnull(status, "") != "Closed"
-			AND grand_total > advance_paid
-			AND abs(100 - per_billed) > 0.01
-			AND delivery_date <= '{0}'
-		ORDER BY
-			transaction_date, name
-	    """.format(today),
-        #as_dict=1,
-		#AND custom_fs_account_number IS NOT NULL
-    )
+
+	if frappe.defaults.get_user_default("company") == "Auroville Bakery":
+		return frappe.db.sql(
+			"""
+			SELECT name FROM `tabSales Order`
+			WHERE
+				docstatus = 1
+				AND ifnull(status, "") != "Closed"
+				AND grand_total > advance_paid
+				AND abs(100 - per_billed) > 0.01
+				AND delivery_date <= '{0}'
+			ORDER BY
+				transaction_date, name
+			""".format(today),
+			#as_dict=1,
+			#AND custom_fs_account_number IS NOT NULL
+		)
+
+	else:
+		return frappe.db.sql(
+			"""
+			SELECT name FROM `tabSales Order`
+			WHERE
+				docstatus = 1
+				AND ifnull(status, "") != "Closed"
+				AND grand_total > advance_paid
+				AND abs(100 - per_billed) > 0.01
+				AND delivery_date <= '{0}'
+			ORDER BY
+				transaction_date, name
+			""".format(today),
+			#as_dict=1,
+			#AND custom_fs_account_number IS NOT NULL
+		)
 
 @frappe.whitelist(allow_guest=True)
 def add_transfer_sales_order(order):
