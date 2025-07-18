@@ -775,6 +775,8 @@ def add_transfer_sales_order(order):
 			return { "OK" }
 
 
+	integration_request = None # initialising before the try except statement, as it is referenced in the except clause
+
 	# if exists, fetch the existing integration request
 	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": order_doc.name}, "name")
 	if integration_request_existing:
@@ -784,16 +786,16 @@ def add_transfer_sales_order(order):
 				msg=_("Duplicate Payment Request: Invoice {0} was paid with Integration Request {1}").format(order_doc.name, integration_request_existing),
 				title='Error',
 			)
-		else:
-			order_doc.custom_fs_transfer_status = int_req_doc.status
-			order_doc.save()
-			frappe.db.commit()
+			return
 
-		return
+		else:
+			integration_request = int_req_doc
+			""" order_doc.custom_fs_transfer_status = int_req_doc.status
+			order_doc.save()
+			frappe.db.commit() """
+
 
 	fs_controller = frappe.get_doc("FS Settings")
-
-	integration_request = None # initialising before the try except statement, as it is referenced in the except clause
 
 	try:
 		# FAPI stage-1
@@ -863,8 +865,8 @@ def add_transfer_sales_order(order):
 			"token": transfer_token
 		}
 
-		# if exists, fetch the existing integration request for this "Payment Entry" doc
-		""" for integration_request_existing in frappe.get_all(
+		""" # if exists, fetch the existing integration request for this "Payment Entry" doc
+		for integration_request_existing in frappe.get_all(
 			"Integration Request",
 			#filters={"status": "Queued", "integration_request_service": "FS", },
 			filters={"status": ["in", {"Queued", "Failed"}], "integration_request_service": "FS", },
@@ -875,13 +877,12 @@ def add_transfer_sales_order(order):
 				integration_request = frappe.get_doc("Integration Request", integration_request_existing)
 				#payment_dict_json = frappe.as_json(payment_dict, indent=1)
 				#frappe.db.set_value("Integration Request", integration_request_existing.name, "data", payment_dict_json)
-				break
+				break """
 
 		# Create an "Integration Request" in case of a fresh transfer
-		if not integration_request: """
-
-		# Create integration log
-		integration_request = create_request_log(payment_dict, service_name="FS")
+		if not integration_request:
+			# Create integration log
+			integration_request = create_request_log(payment_dict, service_name="FS")
 
 		# appending the integration_request name field as Transaction ID in strDescription
 		payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
