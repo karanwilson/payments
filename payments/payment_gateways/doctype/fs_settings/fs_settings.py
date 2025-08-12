@@ -1031,6 +1031,9 @@ def add_transfer_fs_credit_bill(bill):
 				msg=accountMaxAmount_res["Result"],
 				title='Error',
 			)
+			invoice_doc.custom_fs_transfer_status = accountMaxAmount_res["Result"]
+			invoice_doc.save()
+			frappe.db.commit()
 			return
 
 		# FAPI stage-3
@@ -1139,11 +1142,14 @@ def add_transfer_fs_credit_bill(bill):
 			else:
 				integration_request.status = "Failed"
 				integration_request.save(ignore_permissions=True)
+				invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
+				invoice_doc.save()
 				frappe.db.commit()
 				frappe.msgprint(
 					msg=addTransfer_res["Result"],
 					title='Error',
 				)
+
 				return
 
 		else:
