@@ -1040,7 +1040,8 @@ def add_transfer_fs_credit_bill(bill):
 			if invoice_doc.custom_transaction_date:
 				trans_date = invoice_doc.custom_transaction_date
 			else:
-				trans_date = invoice_doc.creation.date()
+				#trans_date = invoice_doc.creation.date()
+				trans_date = invoice_doc.posting_date
 
 			match invoice_doc.company:
 				case "Pour Tous Canteen":
