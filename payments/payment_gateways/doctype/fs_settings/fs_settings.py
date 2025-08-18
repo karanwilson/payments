@@ -344,6 +344,8 @@ def refund_fs_payments(doc, method):
 					strDescription = _("AVBK/{0}/{1}").format(trans_date, doc.name)
 				case "AV Bakery Cafe":
 					strDescription = _("AVBC/{0}/{1}").format(trans_date, doc.name)
+				case "AV Bakery Cafe Townhall":
+					strDescription = _("ABCT/{0}/{1}").format(trans_date, doc.name)
 				case _:
 					strDescription = _("{0}/{1}").format(trans_date, doc.name)
 
@@ -488,6 +490,8 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 				strDescription = _("AVBK/{0}/{1}").format(trans_date, invoice_dict["name"])
 			case "AV Bakery Cafe":
 				strDescription = _("AVBC/{0}/{1}").format(trans_date, invoice_dict["name"])
+			case "AV Bakery Cafe Townhall":
+				strDescription = _("ABCT/{0}/{1}").format(trans_date, invoice_dict["name"])
 			case _:
 				strDescription = _("{0}/{1}").format(trans_date, invoice_dict["name"])
 
@@ -579,21 +583,40 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 @frappe.whitelist(allow_guest=True)
 def fetch_unpaid_sales_orders():
 	today = nowdate()
-	return frappe.db.sql(
-    	"""
-		SELECT name FROM `tabSales Order`
-		WHERE
-			docstatus = 1
-			AND ifnull(status, "") != "Closed"
-			AND grand_total > advance_paid
-			AND abs(100 - per_billed) > 0.01
-			AND delivery_date <= '{0}'
-		ORDER BY
-			transaction_date, name
-	    """.format(today),
-        #as_dict=1,
-		#AND custom_fs_account_number IS NOT NULL
-    )
+
+	if frappe.defaults.get_user_default("company") == "Auroville Bakery":
+		return frappe.db.sql(
+			"""
+			SELECT name FROM `tabSales Order`
+			WHERE
+				docstatus = 1
+				AND ifnull(status, "") != "Closed"
+				AND grand_total > advance_paid
+				AND abs(100 - per_billed) > 0.01
+				AND delivery_date <= '{0}'
+			ORDER BY
+				transaction_date, name
+			""".format(today),
+			#as_dict=1,
+			#AND custom_fs_account_number IS NOT NULL
+		)
+
+	else:
+		return frappe.db.sql(
+			"""
+			SELECT name FROM `tabSales Order`
+			WHERE
+				docstatus = 1
+				AND ifnull(status, "") != "Closed"
+				AND grand_total > advance_paid
+				AND abs(100 - per_billed) > 0.01
+				AND delivery_date <= '{0}'
+			ORDER BY
+				transaction_date, name
+			""".format(today),
+			#as_dict=1,
+			#AND custom_fs_account_number IS NOT NULL
+		)
 
 @frappe.whitelist(allow_guest=True)
 def add_transfer_sales_order(order):
@@ -752,6 +775,8 @@ def add_transfer_sales_order(order):
 			return { "OK" }
 
 
+	integration_request = None # initialising before the try except statement, as it is referenced in the except clause
+
 	# if exists, fetch the existing integration request
 	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": order_doc.name}, "name")
 	if integration_request_existing:
@@ -761,16 +786,16 @@ def add_transfer_sales_order(order):
 				msg=_("Duplicate Payment Request: Invoice {0} was paid with Integration Request {1}").format(order_doc.name, integration_request_existing),
 				title='Error',
 			)
-		else:
-			order_doc.custom_fs_transfer_status = int_req_doc.status
-			order_doc.save()
-			frappe.db.commit()
+			return
 
-		return
+		else:
+			integration_request = int_req_doc
+			""" order_doc.custom_fs_transfer_status = int_req_doc.status
+			order_doc.save()
+			frappe.db.commit() """
+
 
 	fs_controller = frappe.get_doc("FS Settings")
-
-	integration_request = None # initialising before the try except statement, as it is referenced in the except clause
 
 	try:
 		# FAPI stage-1
@@ -818,6 +843,8 @@ def add_transfer_sales_order(order):
 				strDescription = _("AVBK/{0}/{1}").format(trans_date, order_doc.name)
 			case "AV Bakery Cafe":
 				strDescription = _("AVBC/{0}/{1}").format(trans_date, order_doc.name)
+			case "AV Bakery Cafe Townhall":
+				strDescription = _("ABCT/{0}/{1}").format(trans_date, order_doc.name)
 			case _:
 				strDescription = _("{0}/{1}").format(trans_date, order_doc.name)
 
@@ -838,8 +865,8 @@ def add_transfer_sales_order(order):
 			"token": transfer_token
 		}
 
-		# if exists, fetch the existing integration request for this "Payment Entry" doc
-		""" for integration_request_existing in frappe.get_all(
+		""" # if exists, fetch the existing integration request for this "Payment Entry" doc
+		for integration_request_existing in frappe.get_all(
 			"Integration Request",
 			#filters={"status": "Queued", "integration_request_service": "FS", },
 			filters={"status": ["in", {"Queued", "Failed"}], "integration_request_service": "FS", },
@@ -850,13 +877,12 @@ def add_transfer_sales_order(order):
 				integration_request = frappe.get_doc("Integration Request", integration_request_existing)
 				#payment_dict_json = frappe.as_json(payment_dict, indent=1)
 				#frappe.db.set_value("Integration Request", integration_request_existing.name, "data", payment_dict_json)
-				break
+				break """
 
 		# Create an "Integration Request" in case of a fresh transfer
-		if not integration_request: """
-
-		# Create integration log
-		integration_request = create_request_log(payment_dict, service_name="FS")
+		if not integration_request:
+			# Create integration log
+			integration_request = create_request_log(payment_dict, service_name="FS")
 
 		# appending the integration_request name field as Transaction ID in strDescription
 		payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
@@ -1031,6 +1057,9 @@ def add_transfer_fs_credit_bill(bill):
 				msg=accountMaxAmount_res["Result"],
 				title='Error',
 			)
+			invoice_doc.custom_fs_transfer_status = accountMaxAmount_res["Result"]
+			invoice_doc.save()
+			frappe.db.commit()
 			return
 
 		# FAPI stage-3
@@ -1052,6 +1081,8 @@ def add_transfer_fs_credit_bill(bill):
 					strDescription = _("AVBK/{0}/{1}").format(trans_date, invoice_doc.name)
 				case "AV Bakery Cafe":
 					strDescription = _("AVBC/{0}/{1}").format(trans_date, invoice_doc.name)
+				case "AV Bakery Cafe Townhall":
+					strDescription = _("ABCT/{0}/{1}").format(trans_date, doc.name)
 				case _:
 					strDescription = _("{0}/{1}").format(trans_date, invoice_doc.name)
 
@@ -1140,11 +1171,14 @@ def add_transfer_fs_credit_bill(bill):
 			else:
 				integration_request.status = "Failed"
 				integration_request.save(ignore_permissions=True)
+				invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
+				invoice_doc.save()
 				frappe.db.commit()
 				frappe.msgprint(
 					msg=addTransfer_res["Result"],
 					title='Error',
 				)
+
 				return
 
 		else:
