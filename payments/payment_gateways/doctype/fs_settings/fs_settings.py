@@ -832,7 +832,8 @@ def add_transfer_sales_order(order):
 		if not transfer_token:
 			return
 
-		trans_date = order_doc.transaction_date
+		#trans_date = order_doc.transaction_date
+		trans_date = order_doc.delivery_date
 
 		match order_doc.company:
 			case "Pour Tous Canteen":
