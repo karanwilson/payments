@@ -1082,7 +1082,7 @@ def add_transfer_fs_credit_bill(bill):
 				case "AV Bakery Cafe":
 					strDescription = _("AVBC/{0}/{1}").format(trans_date, invoice_doc.name)
 				case "AV Bakery Cafe Townhall":
-					strDescription = _("ABCT/{0}/{1}").format(trans_date, doc.name)
+					strDescription = _("ABCT/{0}/{1}").format(trans_date, invoice_doc.name)
 				case _:
 					strDescription = _("{0}/{1}").format(trans_date, invoice_doc.name)
 
