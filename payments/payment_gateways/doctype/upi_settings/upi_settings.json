@@ -7,31 +7,37 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "upi_id",
-  "upi_pin",
-  "bank_name"
+  "mid",
+  "tid",
+  "source_id",
+  "erp_client_id"
  ],
  "fields": [
   {
-   "fieldname": "upi_id",
+   "fieldname": "erp_client_id",
    "fieldtype": "Data",
-   "label": "UPI ID"
+   "label": "ERP Client iD"
   },
   {
-   "fieldname": "upi_pin",
+   "fieldname": "mid",
    "fieldtype": "Data",
-   "label": "UPI PIN"
+   "label": "MID"
   },
   {
-   "fieldname": "bank_name",
+   "fieldname": "tid",
    "fieldtype": "Data",
-   "label": "Bank Name"
+   "label": "TID"
+  },
+  {
+   "fieldname": "source_id",
+   "fieldtype": "Data",
+   "label": "Source ID"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-11-07 23:11:24.827650",
+ "modified": "2025-09-22 15:31:15.588267",
  "modified_by": "Administrator",
  "module": "Payment Gateways",
  "name": "UPI Settings",

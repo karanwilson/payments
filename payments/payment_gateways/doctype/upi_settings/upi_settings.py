@@ -8,15 +8,22 @@ from frappe.utils import call_hook_method
 from frappe.integrations.utils import create_request_log
 from payments.utils import create_payment_gateway
 
+import requests, json
+
 
 class UPISettings(Document):
 	supported_currencies = ["INR"]
 
+	push_txs_url = "https://iciciapi.lyra-network.in/erpservice/ERP/PushTxn"
+	check_status_url = "https://iciciapi.lyra-network.in/erpservice/ERP/CheckStatus"
+	callback_check_status_url = "https://iciciapi.lyra-network.in/erpservice/ERP/CallbackStatusCheck"
+
+
 	def	validate(self):
 		create_payment_gateway("UPI")
 		call_hook_method("payment_gateway_enabled", gateway="UPI")
-		if not self.flags.ignore_mandatory:
-			self.validate_upi_credentials()
+		#if not self.flags.ignore_mandatory:
+		#	self.validate_upi_credentials()
 
 	def	validate_upi_credentials(self):
 		pass
@@ -28,3 +35,23 @@ class UPISettings(Document):
 					"Please select another payment method. FS does not support transaction in currency '{0}'"
 				).format(currency)
 			)
+
+
+	def checkStatus():
+		pass
+
+
+	def pushTxn():
+		pass
+
+
+	def cancelTxn():
+		pass
+
+
+	def callback():
+		pass
+
+
+	def CheckCallbackStatus():
+		pass
