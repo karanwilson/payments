@@ -942,6 +942,7 @@ def add_transfer_sales_order(order):
 	except Exception as err:
 		if integration_request:
 			integration_request.status = "Failed"
+			integration_request.error = str(err)
 			integration_request.save(ignore_permissions=True)
 			frappe.db.commit()
 
