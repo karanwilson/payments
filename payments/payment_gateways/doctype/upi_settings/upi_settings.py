@@ -36,22 +36,54 @@ class UPISettings(Document):
 				).format(currency)
 			)
 
+	def checkStatus(self, data):
+		api_url = 'https://iciciapi.lyra-network.in/erpservice/ERP/CheckStatus'
 
-	def checkStatus():
-		pass
+		with requests.Session() as s:
+			s.headers = {
+				'content-type': 'application/json'
+				}
+
+			r = s.post(api_url, data=json.dumps(data))
+			#frappe.throw(str(r.json()))
+
+			if r.json().get('ResponseCode') == '01':
+				return "OK"
+			else:
+				#frappe.msgprint(r.json().get('ResponseDesc'))
+				return r.json().get('ResponseDesc')
+				#r.raise_for_status()
 
 
-	def pushTxn():
-		pass
+@frappe.whitelist()
+def icici_check_status():
+	icici_controller = frappe.get_doc("UPI Settings")
+
+	# Sample Data to check service availability
+	data = {
+		"mid": icici_controller.mid,
+		"tid": icici_controller.tid,
+		"tran_type": 1,
+		"bill_no": "123456",
+		"erp_tran_id": "240230025530444",
+		"erp_client_id": icici_controller.erp_client_id,
+		"source_id": icici_controller.source_id
+	}
+
+	return icici_controller.checkStatus(data)
 
 
-	def cancelTxn():
-		pass
+def pushTxn():
+	pass
 
 
-	def callback():
-		pass
+def cancelTxn():
+	pass
 
 
-	def CheckCallbackStatus():
-		pass
+def callback():
+	pass
+
+
+def CheckCallbackStatus():
+	pass
