@@ -14,8 +14,9 @@ import requests, json
 class UPISettings(Document):
 	supported_currencies = ["INR"]
 
-	push_txs_url = "https://iciciapi.lyra-network.in/erpservice/ERP/PushTxn"
 	check_status_url = "https://iciciapi.lyra-network.in/erpservice/ERP/CheckStatus"
+	push_txs_url = "https://iciciapi.lyra-network.in/erpservice/ERP/PushTxn"
+	cancel_txs_url = 'https://iciciapi.lyra-network.in/erpservice/ERP/PushTxn'
 	callback_check_status_url = "https://iciciapi.lyra-network.in/erpservice/ERP/CallbackStatusCheck"
 
 
@@ -37,17 +38,49 @@ class UPISettings(Document):
 			)
 
 	def checkStatus(self, data):
-		api_url = 'https://iciciapi.lyra-network.in/erpservice/ERP/CheckStatus'
-
 		with requests.Session() as s:
 			s.headers = {
 				'content-type': 'application/json'
 				}
 
-			r = s.post(api_url, data=json.dumps(data))
+			r = s.post(self.check_status_url, data=json.dumps(data))
 			#frappe.throw(str(r.json()))
 
 			if r.json().get('ResponseCode') == '01':
+				return "OK"
+			else:
+				#frappe.msgprint(r.json().get('ResponseDesc'))
+				return r.json().get('ResponseDesc')
+				#r.raise_for_status()
+
+
+	def pushTxn(self, data):
+		with requests.Session() as s:
+			s.headers = {
+				'content-type': 'application/json'
+				}
+
+			r = s.post(self.push_txs_url, data=json.dumps(data))
+			#frappe.throw(str(r.json()))
+
+			if r.json().get('ResponseCode') == '00':
+				return "OK"
+			else:
+				#frappe.msgprint(r.json().get('ResponseDesc'))
+				return r.json().get('ResponseDesc')
+				#r.raise_for_status()
+
+
+	def cancelTxn(self, data):
+		with requests.Session() as s:
+			s.headers = {
+				'content-type': 'application/json'
+				}
+
+			r = s.post(self.cs, data=json.dumps(data))
+			#frappe.throw(str(r.json()))
+
+			if r.json().get('ResponseCode') == '00':
 				return "OK"
 			else:
 				#frappe.msgprint(r.json().get('ResponseDesc'))
@@ -63,7 +96,7 @@ def icici_check_status():
 	data = {
 		"mid": icici_controller.mid,
 		"tid": icici_controller.tid,
-		"tran_type": 1,
+		"tran_type": 16,
 		"bill_no": "123456",
 		"erp_tran_id": "240230025530444",
 		"erp_client_id": icici_controller.erp_client_id,
@@ -73,11 +106,45 @@ def icici_check_status():
 	return icici_controller.checkStatus(data)
 
 
-def pushTxn():
-	pass
+def icici_push_txn(bill_no, upi_amount):
+	icici_controller = frappe.get_doc("UPI Settings")
+
+	integration_request = None
+
+	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": bill_no}, "name")
+	if integration_request_existing:
+		integration_request = frappe.get_doc("Integration Request", integration_request_existing)
+		if integration_request.status == "Completed":
+			data = json.loads(integration_request.data)
+			# appending the integration_request name field as Transaction ID in strDescription
+			remarks = _("{0}/{1}").format(data["strDescription"], integration_request.name)
+			return {
+				"custom_upi_transfer_status": "OK",
+				"remarks": remarks
+			}
+		else:
+			return {
+				"custom_fs_transfer_status": integration_request.status,
+				"remarks": "Null"
+			}
+
+	# Sample Data to check service availability
+	data = {
+		"mid": icici_controller.mid,
+		"tid": icici_controller.tid,
+		"tran_type": 16,
+		"amount": upi_amount,
+		"bill_no": bill_no,
+		"tip": "0.0",
+		"erp_tran_id": "240230025530444",
+		"erp_client_id": icici_controller.erp_client_id,
+		"source_id": icici_controller.source_id
+	}
+
+	return icici_controller.pushTxn(data)
 
 
-def cancelTxn():
+def icici_cancel_txn():
 	pass
 
 
