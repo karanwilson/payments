@@ -134,19 +134,19 @@ def get_last_day_of_Month():
     return last_day_of_Month
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def login():
 	fs_controller = frappe.get_doc("FS Settings")
 	login_res = fs_controller.fapi_login()
 	return login_res["Result"]
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def logout():
 	fs_controller = frappe.get_doc("FS Settings")
 	return fs_controller.fapi_logout()
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def fetch_fs_accounts_detail():
 	fs_controller = frappe.get_doc("FS Settings")
 	login_res = fs_controller.fapi_login()
@@ -175,7 +175,7 @@ def fetch_fs_accounts_detail():
 			frappe.msgprint(str(accountsRange))
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def get_account_max_amount(fs_acc_customer):
 	fs_account_number = frappe.get_value("Customer", fs_acc_customer, "custom_fs_account_number")
 
@@ -198,7 +198,7 @@ def get_account_max_amount(fs_acc_customer):
 			return login_res["Result"]
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def add_transfer_contribution(doc, method):
 	# check if the Payment Entry is for PTDC Contibutions - the function doesn't run in case of returns and other Payment Entries
 	# the function also doesn't run in case a FS Transfer Status has value "OK"
@@ -409,7 +409,7 @@ def refund_fs_payments(doc, method):
 			raise err
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 	invoice_dict = json.loads(invoice_doc)
 
@@ -580,7 +580,7 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 		} """
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def fetch_unpaid_sales_orders():
 	today = nowdate()
 
@@ -618,7 +618,7 @@ def fetch_unpaid_sales_orders():
 			#AND custom_fs_account_number IS NOT NULL
 		)
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def add_transfer_sales_order(order):
 	order_doc = frappe.get_doc("Sales Order", order)
 
@@ -955,7 +955,7 @@ def add_transfer_sales_order(order):
 	return
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def fetch_fs_credit_bills():
 	""" match year:
 		case "Current":
@@ -975,7 +975,7 @@ def fetch_fs_credit_bills():
         #as_dict=1,
     )
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def add_transfer_fs_credit_bill(bill):
 	invoice_doc = frappe.get_doc("Sales Invoice", bill)
 
@@ -1203,7 +1203,7 @@ def add_transfer_fs_credit_bill(bill):
 		return
 
 
-#@frappe.whitelist(allow_guest=True)
+#@frappe.whitelist()
 #def add_transfer_fs_draft_bills():
 	# for Offline FS bills
 
