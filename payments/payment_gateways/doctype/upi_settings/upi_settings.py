@@ -68,8 +68,8 @@ class UPISettings(Document):
 				'content-type': 'application/json',
 				'User-Agent': 'Custom App'
 				}
-
-			r = s.post(self.push_txs_url, data=json.dumps(data))
+			
+			r = s.post(self.push_txs_url, data=json.dumps(data), timeout=40)
 			#frappe.throw(str(r.json()))
 
 			if r.json().get('ResponseCode') != '00':
