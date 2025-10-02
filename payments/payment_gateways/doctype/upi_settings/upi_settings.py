@@ -20,7 +20,7 @@ class UPISettings(Document):
 	cancel_txs_url = "https://iciciapi.lyra-network.in/erpservice/ERP/CancelTxn"
 	callback_check_status_url = "https://iciciapi.lyra-network.in/erpservice/ERP/CallbackStatusCheck"
 
-	webhook_callback_url = "https://pourtous-av.in/api/method/payments/payment_gateways/doctype/upi_settings/upi_settings.icici_webhook_callback"
+	webhook_callback_url = "https://pourtous-av.in/api/method/payments.payment_gateways.doctype.upi_settings.upi_settings.icici_webhook_callback"
 
 
 	def	validate(self):
@@ -156,24 +156,62 @@ def check_status(bill_no, tran_type, erp_tran_id):
 	return icici_controller.checkStatus(data)
 
 
+# @frappe.whitelist(allow_guest=True)
+# def icici_webhook_callback_test():
+# 	data = frappe.request.data
+# 	upi_response = json.loads(data)
+# 	with open('webhook_req_log.txt', 'w') as file:
+# 		file.write(str(upi_response))
+
+
 #to be used when webhook is active
 @frappe.whitelist()
-async def icici_webhook_callback(integration_request_name=None):
-	data = await asyncio.wait(frappe.request.post, timeout=40)
+def icici_webhook_callback(integration_request_name=None):
+	if integration_request_name:
+		webhook_request_log_existing = frappe.get_value("Webhook Request Log", {
+			"reference_document": integration_request_name,
+		}, "name")
+	
+		if webhook_request_log_existing:
+			webhook_request_log = frappe.get_doc("Webhook Request Log", webhook_request_log_existing)
+			return {
+				"custom_upi_transfer_status": webhook_request_log.response.get("TxnStatus"),
+				"TranType": webhook_request_log.response.get("TranType"),
+				"ErpTranId": webhook_request_log.response.get("ErpTranId"),
+				"TranId": webhook_request_log.response.get("TranId")
+			}
 
-	if data.get("TxnStatus") == "SUCCESS":
+	data = frappe.request.data
+	upi_response = json.loads(data)
+
+	if upi_response.get("TxnStatus") == "SUCCESS":
 		icici_controller = frappe.get_doc("UPI Settings")
 
 		webhook_req_log = frappe.new_doc("Webhook Request Log")
 		webhook_req_log.user = icici_controller.erp_callback_user_id
 
-		if "ErpTranId" in data:
+		if "ErpTranId" in upi_response:
 			# store the Integration Request ID as reference_document in the webhook_req_log
-			webhook_req_log.reference_document = data.get("ErpTranId")
-		webhook_req_log.response = data.json()
+			webhook_req_log.reference_document = upi_response.get("ErpTranId")
+		webhook_req_log.response = data
 		webhook_req_log.insert()
 
-	if integration_request_name and data.get("ErpTranId") == integration_request.name:
+		if integration_request_name:
+			integration_request = frappe.get_doc("Integration Request", integration_request_name)
+			integration_request.output = data.json()
+			integration_request.status == "Completed"
+			integration_request.save(ignore_permissions=True)
+
+		if "ErpTranId" in upi_response and upi_response.get("ErpTranId") == integration_request_name:
+			return {
+				"custom_upi_transfer_status": upi_response.get("TxnStatus"),
+				"TranType": upi_response.get("TranType"),
+				"ErpTranId": upi_response.get("ErpTranId"),
+				"TranId": upi_response.get("TranId")
+			}
+
+
+	""" if integration_request_name and data.get("ErpTranId") == integration_request.name:
 		integration_request = frappe.get_doc("Integration Request", integration_request_name)
 		integration_request.output = data.json()
 
@@ -184,7 +222,7 @@ async def icici_webhook_callback(integration_request_name=None):
 		else:
 			integration_request.status == "Failed"
 			integration_request.save(ignore_permissions=True)
-			return "FAILED"
+			return "FAILED" """
 
 
 @frappe.whitelist()
@@ -233,14 +271,14 @@ def get_upi_confirmation(bill_no, tran_type, erp_tran_id, before_push_txn=False)
 				"TranId": res.get("RspData").get("TranId")
 			}
 
-		else:
+		elif res.get("ResponseCode") == "02" or res.get("ResponseDesc") == "Invalid MID/TID.":
 			integration_request.status == "Failed"
 			integration_request.save(ignore_permissions=True)
 			return res
 	
-	else:
-		integration_request.status == "Failed"
-		integration_request.save(ignore_permissions=True)
+	# else:
+	# 	integration_request.status == "Failed"
+	# 	integration_request.save(ignore_permissions=True)
 	# else:
 	# 	frappe.throw(str(res))
 
@@ -292,6 +330,11 @@ def push_txn(invoice_doc, tran_type, amount, tip):
 							"ErpTranId": res.get("RspData").get("ErpTranId"),
 							"TranId": res.get("RspData").get("TranId")
 						}
+					
+					elif res.get("ResponseCode") == "02" or res.get("ResponseDesc") == "Invalid MID/TID.":
+						integration_request_existing.status == "Failed"
+						integration_request_existing.save(ignore_permissions=True)
+						return res
 
 					ir = frappe.db.get_value("Integration Request", integration_request_existing["name"], "creation")
 					# delete the matching old records
