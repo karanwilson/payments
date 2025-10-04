@@ -199,6 +199,27 @@ def get_account_max_amount(fs_acc_customer):
 
 
 @frappe.whitelist()
+def get_transactions(strAccountNumber, intMonth, intYear):
+	fs_controller = frappe.get_doc("FS Settings")
+	login_res = fs_controller.fapi_login()
+
+	if login_res["Result"] == "OK":
+		if fs_controller.production:
+			getTransactions_res = fs_controller.production_service.getTransactions(strAccountNumber, intMonth, intYear)
+		else:
+			getTransactions_res = fs_controller.staging_service.getTransactions(strAccountNumber, intMonth, intYear)
+		response = {
+			"Result": getTransactions_res["Result"],
+			"Message": getTransactions_res["Message"],
+			"Transactions": getTransactions_res["Transactions"],
+		}
+		return response
+
+	else:
+		return login_res["Result"]
+
+
+@frappe.whitelist()
 def add_transfer_contribution(doc, method):
 	# check if the Payment Entry is for PTDC Contibutions - the function doesn't run in case of returns and other Payment Entries
 	# the function also doesn't run in case a FS Transfer Status has value "OK"

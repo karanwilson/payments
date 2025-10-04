@@ -65,6 +65,14 @@
               <xsd:element name="maxAmount" type="xsd:string"/>
             </xsd:sequence>
           </xsd:complexType>
+
+          <xsd:complexType name="accountTransactionsResponse">
+            <xsd:sequence>
+              <xsd:element name="Result" type="xsd:string"/>
+              <xsd:element name="Message" type="xsd:string"/>
+              <xsd:element name="Transactions" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:complexType>
     </xsd:schema>
   </wsdl:types>
 
@@ -125,6 +133,15 @@
     <wsdl:part name="return" type="tns:rangeResponse"/>
   </wsdl:message>
 
+  <wsdl:message name="transactionsRequest">
+    <wsdl:part name="strAccountNumber" type="xsd:string"/>
+    <wsdl:part name="intMonth" type="xsd:integer"/>
+    <wsdl:part name="intYear" type="xsd:integer"/>
+  </wsdl:message>
+  <wsdl:message name="transactionsResponse">
+    <wsdl:part name="return" type="tns:accountTransactionsResponse"/>
+  </wsdl:message>
+
   <wsdl:message name="testTransferRequest">
     <wsdl:part name="strAccountNumberFrom" type="xsd:string"/>
     <wsdl:part name="strAccountNumberTo" type="xsd:string"/>
@@ -166,6 +183,11 @@
     <wsdl:operation name="getAccountRange">
       <wsdl:input message="tns:accountRangeRequest"/>
       <wsdl:output message="tns:accountRangeResponse"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="getTransactions">
+      <wsdl:input message="tns:transactionsRequest"/>
+      <wsdl:output message="tns:transactionsResponse"/>
     </wsdl:operation>
 
     <wsdl:operation name="testTransfer">
@@ -235,6 +257,16 @@
 
     <wsdl:operation name="getAccountRange">
       <soap:operation soapAction="urn:assets/payments/FS/getAccountRange" style="rpc"/>
+      <wsdl:input>
+        <soap:body use="encoded"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="encoded"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="getTransactions">
+      <soap:operation soapAction="urn:assets/payments/FS/getTransactions" style="rpc"/>
       <wsdl:input>
         <soap:body use="encoded"/>
       </wsdl:input>
