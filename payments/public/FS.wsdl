@@ -69,7 +69,7 @@
           <xsd:complexType name="accountTransactionsResponse">
             <xsd:sequence>
               <xsd:element name="Result" type="xsd:string"/>
-              <xsd:element name="Message" type="xsd:string"/>
+              <!-- <xsd:element name="Message" type="xsd:string"/> -->
               <xsd:element name="Transactions" type="xsd:string"/>
             </xsd:sequence>
           </xsd:complexType>

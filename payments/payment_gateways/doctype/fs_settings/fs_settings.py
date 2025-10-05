@@ -21,13 +21,14 @@ import datetime
 from datetime import datetime
 
 from phpserialize3 import *
+import xml.etree.ElementTree as ET
 #import os
 
 
 class FSSettings(Document):
 	supported_currencies = ["INR"]
 	# Initialise the SOAP client
-	transport = Transport(timeout=10, operation_timeout=15)
+	transport = Transport(timeout=10, operation_timeout=30)
 	fs_client = Client("assets/payments/FS.wsdl", transport=transport)
 	production_service = fs_client.create_service("{urn:assets/payments/FS}FS_SoapBinding", "https://api3.avfs.org.in/server3.php")
 	staging_service = fs_client.create_service("{urn:assets/payments/FS}FS_SoapBinding", "https://api3-staging.financialservice.org.in/server3.php")
@@ -127,6 +128,21 @@ class FSSettings(Document):
 				).format(currency)
 			)
 
+	# for testing only
+	def get_transactions(self, strAccountNumber, intMonth, intYear):
+		fs_controller = frappe.get_doc("FS Settings")
+		login_res = fs_controller.fapi_login()
+
+		if login_res["Result"] == "OK":
+			if fs_controller.production:
+				getTransactions_res = fs_controller.production_service.getTransactions(strAccountNumber, intMonth, intYear)
+			else:
+				getTransactions_res = fs_controller.staging_service.getTransactions(strAccountNumber, intMonth, intYear)
+			return getTransactions_res
+
+		else:
+			return login_res["Result"]
+
 
 def get_last_day_of_Month():
     today = nowdate()
@@ -198,7 +214,6 @@ def get_account_max_amount(fs_acc_customer):
 			return login_res["Result"]
 
 
-@frappe.whitelist()
 def get_transactions(strAccountNumber, intMonth, intYear):
 	fs_controller = frappe.get_doc("FS Settings")
 	login_res = fs_controller.fapi_login()
@@ -208,15 +223,47 @@ def get_transactions(strAccountNumber, intMonth, intYear):
 			getTransactions_res = fs_controller.production_service.getTransactions(strAccountNumber, intMonth, intYear)
 		else:
 			getTransactions_res = fs_controller.staging_service.getTransactions(strAccountNumber, intMonth, intYear)
-		response = {
-			"Result": getTransactions_res["Result"],
-			"Message": getTransactions_res["Message"],
-			"Transactions": getTransactions_res["Transactions"],
-		}
-		return response
+		return getTransactions_res
 
 	else:
 		return login_res["Result"]
+
+
+def check_payment_status(getTransactions_res, invoice_id, fAmount):
+	# Parsing XML data returned from get_transactions
+	# Reading the data from a string:
+	root = ET.fromstring(getTransactions_res['Transactions'])
+
+	if fAmount > 0:
+		# debit transaction
+		for child in root:
+			if len(child) > 3: # only match rows with more than 3 columns; to identify the ERPNext tx rows
+				desc_array = child[4].text.split('/')
+				if len(desc_array) > 2: # match rows with description fields from ERPNext
+					#print(desc_array[2], ' ', child[6].text)
+					# desc_array[2] holds the Invoice ID to be matched; child[6].text holds the Amount transferred (Debit)
+					if desc_array[2] == invoice_id and float(child[6].text) == float(fAmount):
+						return {
+							"status": "paid",
+							"strDescription": child[4].text
+						}
+
+	else:
+		# credit (returns) transaction
+		for child in root:
+			if len(child) > 3: # 
+				desc_array = child[4].text.split('/')
+				if len(desc_array) > 2:
+					# desc_array[2] holds the Invoice ID to be matched; child[5].text holds the Amount transferred (Credit)
+					if desc_array[2] == invoice_id and float(child[5].text) == float(fAmount):
+						return {
+							"status": "paid",
+							"strDescription": child[4].text
+						}
+
+	return {
+			"status": "unpaid"
+		}
 
 
 @frappe.whitelist()
@@ -322,12 +369,12 @@ def refund_fs_payments(doc, method):
 	if doc.mode_of_payment == "FS":
 		integration_request = None
 
-		integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": doc.name}, "name")
+		""" integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": doc.name}, "name")
 		if integration_request_existing:
 			integration_request = frappe.get_doc("Integration Request", integration_request_existing)
 			if integration_request.status == "Completed":
 				frappe.msgprint("Integration Request Exists!")
-				return
+				return """
 
 		fs_controller = frappe.get_doc("FS Settings")
 		if fs_controller.production:
@@ -991,25 +1038,69 @@ def fetch_fs_credit_bills():
 		SELECT name
 		FROM `tabSales Invoice`
 		WHERE docstatus = 1 AND status IN ("Unpaid", "Overdue", "Partly Paid", "Return")
-		AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "Retry-Payment", "Failed", "ERR101: Account number (to) '0373' is invalid.", "ERR095: Account (from) "102142" not Active (Suspended, Locked or Closed)");
+		AND custom_fs_transfer_status NOT LIKE "OK%"
 	    """,
         #as_dict=1,
+		#AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "Retry-Payment", "Failed", "ERR101: Account number (to) '0373' is invalid.", "ERR095: Account (from) "102142" not Active (Suspended, Locked or Closed)");
     )
 
 @frappe.whitelist()
 def add_transfer_fs_credit_bill(bill):
 	invoice_doc = frappe.get_doc("Sales Invoice", bill)
+	fAmount = invoice_doc.outstanding_amount
+	fs_controller = frappe.get_doc("FS Settings")
+
+	integration_request = None # initialising early, as it is referenced in the except clause
 
 	# if exists, fetch the existing integration request
 	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_doc.name}, "name")
-	if integration_request_existing and invoice_doc.custom_fs_transfer_status != "Retry-Payment":
-		int_req_doc = frappe.get_doc("Integration Request", integration_request_existing)
-		status_msg = int_req_doc.name + ": check FS tx status"
+	if integration_request_existing:
+		integration_request = frappe.get_doc("Integration Request", integration_request_existing)
 
-		invoice_doc.custom_fs_transfer_status = status_msg
-		invoice_doc.save()
-		frappe.db.commit()
-		return
+		res = get_transactions(fs_controller.fs_account, integration_request.creation.date().month, integration_request.creation.date().year)
+		payment_status = check_payment_status(res, invoice_doc.name, fAmount)
+
+		if payment_status.get("status") == "paid":
+			integration_request.status = "Completed"
+			integration_request.save(ignore_permissions=True)
+			#frappe.db.commit()
+
+			invoice_doc.custom_fs_transfer_status = "OK - Paid"
+			invoice_doc.save()
+			frappe.db.commit()
+
+			# If FS transfer was successful,
+			# then create a Payment Entry and reconcile with the Sales Invoice
+
+			bank_account = get_bank_cash_account("FS", invoice_doc.company)
+
+			pe = get_payment_entry(
+				dt = invoice_doc.doctype,
+				dn = invoice_doc.name,
+				bank_account = bank_account["account"],
+			)
+			pe.mode_of_payment = "FS"
+			pe.reference_no = payment_status.get("strDescription")
+			pe.reference_date = nowdate()
+			#pe.paid_amount = pe.received_amount = fAmount
+			pe.custom_fs_transfer_status = "OK - Paid"
+			#pe.custom_remarks = 1
+			pe.remarks = "OK - Paid"
+
+			pe.insert(ignore_permissions=True)
+			pe.submit()
+
+			return "OK - Paid"
+
+		""" integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_doc.name}, "name")
+		if integration_request_existing and invoice_doc.custom_fs_transfer_status != "Retry-Payment":
+			int_req_doc = frappe.get_doc("Integration Request", integration_request_existing)
+			status_msg = int_req_doc.name + ": check FS tx status"
+
+			invoice_doc.custom_fs_transfer_status = status_msg
+			invoice_doc.save()
+			frappe.db.commit()
+			return """
 
 		""" if int_req_doc.status == 'Completed':
 			frappe.msgprint(
@@ -1026,10 +1117,6 @@ def add_transfer_fs_credit_bill(bill):
 	if not cust_fs_acc_number:
 		frappe.throw(str(invoice_doc.customer))
 
-	fs_controller = frappe.get_doc("FS Settings")
-
-	integration_request = None # initialising before the try except statement, as it is referenced in the except clause
-
 	try:
 		# FAPI stage-1
 		login_res = fs_controller.fapi_login()
@@ -1044,8 +1131,6 @@ def add_transfer_fs_credit_bill(bill):
 			fs_service_proxy = fs_controller.production_service
 		else:
 			fs_service_proxy = fs_controller.staging_service
-
-		fAmount = invoice_doc.outstanding_amount
 
 		# FAPI stage-2
 		accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(cust_fs_acc_number)
@@ -1138,13 +1223,12 @@ def add_transfer_fs_credit_bill(bill):
 					integration_request = frappe.get_doc("Integration Request", integration_request_existing)
 					#payment_dict_json = frappe.as_json(payment_dict, indent=1)
 					#frappe.db.set_value("Integration Request", integration_request_existing.name, "data", payment_dict_json)
-					break
+					break """
 
 			# Create an "Integration Request" in case of a fresh transfer
-			if not integration_request: """
-
-			# Create integration log
-			integration_request = create_request_log(payment_dict, service_name="FS")
+			if not integration_request:
+				# Create integration log
+				integration_request = create_request_log(payment_dict, service_name="FS")
 
 			# appending the integration_request name field as Transaction ID in strDescription
 			payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
