@@ -129,19 +129,19 @@ class FSSettings(Document):
 			)
 
 	# for testing only
-	def get_transactions(self, strAccountNumber, intMonth, intYear):
-		fs_controller = frappe.get_doc("FS Settings")
-		login_res = fs_controller.fapi_login()
+	# def get_transactions(self, strAccountNumber, intMonth, intYear):
+	# 	fs_controller = frappe.get_doc("FS Settings")
+	# 	login_res = fs_controller.fapi_login()
 
-		if login_res["Result"] == "OK":
-			if fs_controller.production:
-				getTransactions_res = fs_controller.production_service.getTransactions(strAccountNumber, intMonth, intYear)
-			else:
-				getTransactions_res = fs_controller.staging_service.getTransactions(strAccountNumber, intMonth, intYear)
-			return getTransactions_res
+	# 	if login_res["Result"] == "OK":
+	# 		if fs_controller.production:
+	# 			getTransactions_res = fs_controller.production_service.getTransactions(strAccountNumber, intMonth, intYear)
+	# 		else:
+	# 			getTransactions_res = fs_controller.staging_service.getTransactions(strAccountNumber, intMonth, intYear)
+	# 		return getTransactions_res
 
-		else:
-			return login_res["Result"]
+	# 	else:
+	# 		return login_res["Result"]
 
 
 def get_last_day_of_Month():
