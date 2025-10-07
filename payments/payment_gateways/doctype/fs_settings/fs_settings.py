@@ -1047,7 +1047,11 @@ def fetch_fs_credit_bills():
 @frappe.whitelist()
 def add_transfer_fs_credit_bill(bill):
 	invoice_doc = frappe.get_doc("Sales Invoice", bill)
-	fAmount = invoice_doc.outstanding_amount
+	if invoice_doc.is_return:
+		fAmount = invoice_doc.grand_total
+	else:
+		fAmount = invoice_doc.outstanding_amount
+
 	fs_controller = frappe.get_doc("FS Settings")
 
 	integration_request = None # initialising early, as it is referenced in the except clause
@@ -1072,23 +1076,24 @@ def add_transfer_fs_credit_bill(bill):
 			# If FS transfer was successful,
 			# then create a Payment Entry and reconcile with the Sales Invoice
 
-			bank_account = get_bank_cash_account("FS", invoice_doc.company)
+			if not invoice_doc.is_return:
+				bank_account = get_bank_cash_account("FS", invoice_doc.company)
 
-			pe = get_payment_entry(
-				dt = invoice_doc.doctype,
-				dn = invoice_doc.name,
-				bank_account = bank_account["account"],
-			)
-			pe.mode_of_payment = "FS"
-			pe.reference_no = payment_status.get("strDescription")
-			pe.reference_date = nowdate()
-			#pe.paid_amount = pe.received_amount = fAmount
-			pe.custom_fs_transfer_status = "OK - Paid"
-			#pe.custom_remarks = 1
-			pe.remarks = "OK - Paid"
+				pe = get_payment_entry(
+					dt = invoice_doc.doctype,
+					dn = invoice_doc.name,
+					bank_account = bank_account["account"],
+				)
+				pe.mode_of_payment = "FS"
+				pe.reference_no = payment_status.get("strDescription")
+				pe.reference_date = nowdate()
+				#pe.paid_amount = pe.received_amount = fAmount
+				pe.custom_fs_transfer_status = "OK - Paid"
+				#pe.custom_remarks = 1
+				pe.remarks = "OK - Paid"
 
-			pe.insert(ignore_permissions=True)
-			pe.submit()
+				pe.insert(ignore_permissions=True)
+				pe.submit()
 
 			return "OK - Paid"
 
@@ -1255,23 +1260,24 @@ def add_transfer_fs_credit_bill(bill):
 				# If FS transfer was successful,
 				# then create a Payment Entry and reconcile with the Sales Invoice
 
-				bank_account = get_bank_cash_account("FS", invoice_doc.company)
+				if not invoice_doc.is_return:
+					bank_account = get_bank_cash_account("FS", invoice_doc.company)
 
-				pe = get_payment_entry(
-					dt = invoice_doc.doctype,
-					dn = invoice_doc.name,
-					bank_account = bank_account["account"],
-				)
-				pe.mode_of_payment = "FS"
-				pe.reference_no = payment_dict["strDescription"]
-				pe.reference_date = nowdate()
-				#pe.paid_amount = pe.received_amount = fAmount
-				pe.custom_fs_transfer_status = addTransfer_res["Result"]
-				pe.custom_remarks = 1
-				pe.remarks = addTransfer_res["Message"]
+					pe = get_payment_entry(
+						dt = invoice_doc.doctype,
+						dn = invoice_doc.name,
+						bank_account = bank_account["account"],
+					)
+					pe.mode_of_payment = "FS"
+					pe.reference_no = payment_dict["strDescription"]
+					pe.reference_date = nowdate()
+					#pe.paid_amount = pe.received_amount = fAmount
+					pe.custom_fs_transfer_status = addTransfer_res["Result"]
+					pe.custom_remarks = 1
+					pe.remarks = addTransfer_res["Message"]
 
-				pe.insert(ignore_permissions=True)
-				pe.submit()
+					pe.insert(ignore_permissions=True)
+					pe.submit()
 
 				return addTransfer_res["Result"]
 
