@@ -171,7 +171,7 @@ def icici_webhook_callback(integration_request_name=None):
 		webhook_request_log_existing = frappe.get_value("Webhook Request Log", {
 			"reference_document": integration_request_name,
 		}, "name")
-	
+
 		if webhook_request_log_existing:
 			webhook_request_log = frappe.get_doc("Webhook Request Log", webhook_request_log_existing)
 			return {
@@ -193,7 +193,7 @@ def icici_webhook_callback(integration_request_name=None):
 		if "ErpTranId" in upi_response:
 			# store the Integration Request ID as reference_document in the webhook_req_log
 			webhook_req_log.reference_document = upi_response.get("ErpTranId")
-		webhook_req_log.response = data
+		webhook_req_log.response = data.json()
 		webhook_req_log.insert()
 
 		if integration_request_name:
