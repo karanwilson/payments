@@ -265,7 +265,7 @@ def get_upi_confirmation(bill_no, tran_type, erp_tran_id, before_push_txn=False)
 			integration_request.status = "Completed"
 			integration_request.save(ignore_permissions=True)
 			return {
-				"custom_upi_transfer_status": data.get("ResponseDesc"),
+				"custom_upi_transfer_status": res.get("ResponseDesc"),
 				"ResponseCode": res.get("ResponseCode"),
 				"ResponseDesc": res.get("ResponseDesc"),
 				"ErpTranId": res.get("RspData").get("ErpTranId"),
