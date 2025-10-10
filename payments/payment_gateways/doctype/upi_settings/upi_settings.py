@@ -9,7 +9,8 @@ from frappe.integrations.utils import create_request_log
 from payments.utils import create_payment_gateway
 
 import requests, json
-import asyncio
+#import os
+#import asyncio
 
 
 class UPISettings(Document):
@@ -326,6 +327,12 @@ def push_txn(invoice_doc, tran_type, amount, tip):
 				integration_request = frappe.get_doc("Integration Request", integration_request_existing["name"])
 
 				res = get_upi_confirmation(invoice_dict["name"], tran_type, integration_request_existing["name"], before_push_txn=True)
+				# if os.path.exists('CallbackStatus.txt'):
+				# 	append_write = 'a' # append if already exists
+				# else:
+				# 	append_write = 'w' # make a new file if not
+				# with open('CallbackStatus.txt', append_write) as file:
+				# 	file.write(str(res))
 				#frappe.throw(str(res))
 
 				if res:
