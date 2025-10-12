@@ -15,6 +15,7 @@
   "erp_callback_api_key",
   "erp_callback_api_secret",
   "erp_callback_api_token",
+  "transaction_fee_account",
   "test"
  ],
  "fields": [
@@ -68,12 +69,18 @@
    "fieldtype": "Data",
    "label": "ERP Callback User ID",
    "options": "Email"
+  },
+  {
+   "fieldname": "transaction_fee_account",
+   "fieldtype": "Link",
+   "label": "Transaction Fee Account",
+   "options": "Account"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-09-27 10:15:17.346583",
+ "modified": "2025-10-11 12:11:30.246472",
  "modified_by": "Administrator",
  "module": "Payment Gateways",
  "name": "UPI Settings",

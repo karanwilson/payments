@@ -306,6 +306,7 @@ def push_txn(invoice_doc, tran_type, amount, tip):
 		data = json.loads(integration_request.output) # converting json to dict
 
 		return {
+			"ir_status": integration_request.status,
 			"custom_upi_transfer_status": data.get("ResponseDesc"),
 			"ResponseCode": data.get("ResponseCode"),
 			"ResponseDesc": data.get("ResponseDesc"),
@@ -336,7 +337,7 @@ def push_txn(invoice_doc, tran_type, amount, tip):
 				#frappe.throw(str(res))
 
 				if res:
-					if res.get("ResponseCode") == "00" or res.get("ResponseDesc") == "SUCCESS":
+					if res.get("ResponseCode") == "00" or res.get("ResponseDesc") == "SUCCESS" or res.get("ResponseDesc") == "Approved or completed successfully":
 						integration_request.output = json.dumps(res) # converting dict to json for storage
 						integration_request.status = "Completed"
 						integration_request.save(ignore_permissions=True)
