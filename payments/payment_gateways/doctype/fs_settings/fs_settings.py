@@ -22,7 +22,7 @@ from datetime import datetime
 
 from phpserialize3 import *
 import xml.etree.ElementTree as ET
-#import os
+import os
 
 
 class FSSettings(Document):
@@ -232,34 +232,65 @@ def get_transactions(strAccountNumber, intMonth, intYear):
 def check_payment_status(getTransactions_res, invoice_id, fAmount):
 	# Parsing XML data returned from get_transactions
 	# Reading the data from a string:
+	#frappe.throw(str(getTransactions_res['Transactions']))
+
+	# with open('getTransactions_res.txt', 'w') as file:
+	# 	file.write(str(getTransactions_res['Transactions']))
+
 	root = ET.fromstring(getTransactions_res['Transactions'])
 
-	if fAmount > 0:
+	# with open('getTransactions_res_root.txt', 'w') as file:
+	# 	file.write(str(root))
+
+	try:
+		os.remove('getTransactions_res_child.txt')
+	except OSError:
+		pass
+
+	if float(fAmount) > 0:
 		# debit transaction
 		for child in root:
-			if len(child) > 3: # only match rows with more than 3 columns; to identify the ERPNext tx rows
-				desc_array = child[4].text.split('/')
-				if len(desc_array) > 2: # match rows with description fields from ERPNext
-					#print(desc_array[2], ' ', child[6].text)
-					# desc_array[2] holds the Invoice ID to be matched; child[6].text holds the Amount transferred (Debit)
-					if desc_array[2] == invoice_id and float(child[6].text) == float(fAmount):
-						return {
-							"status": "paid",
-							"strDescription": child[4].text
-						}
+			if len(child) > 3 and child[4].text is not None: # only match rows with more than 3 columns; to identify the ERPNext tx rows
+				try:
+					desc_array = child[4].text.split('/')
+					if len(desc_array) > 2: # match rows with description fields from ERPNext
+						#print(desc_array[2], ' ', child[6].text)
+						# desc_array[2] holds the Invoice ID to be matched; child[6].text holds the Amount transferred (Debit)
+						if desc_array[2] == invoice_id and float(child[6].text) == float(fAmount):
+							return {
+								"status": "paid",
+								"strDescription": child[4].text
+							}
+
+				except Exception as err:
+					if os.path.exists('getTransactions_res_child.txt'):
+						append_write = 'a' # append if already exists
+					else:
+						append_write = 'w' # make a new file if not
+					with open('getTransactions_res_child.txt', append_write) as file:
+						file.write("Error: " + str(err) + "\n Invoice: " + str(invoice_id) + " child[0]: " + str(child[0].text) + " child[4]: " + str(child[4].text) + " \n")
 
 	else:
 		# credit (returns) transaction
 		for child in root:
-			if len(child) > 3: # 
-				desc_array = child[4].text.split('/')
-				if len(desc_array) > 2:
-					# desc_array[2] holds the Invoice ID to be matched; child[5].text holds the Amount transferred (Credit)
-					if desc_array[2] == invoice_id and float(child[5].text) == float(fAmount):
-						return {
-							"status": "paid",
-							"strDescription": child[4].text
-						}
+			if len(child) > 3 and child[4].text is not None: # only match rows with more than 3 columns; to identify the ERPNext tx rows
+				try:
+					desc_array = child[4].text.split('/')
+					if len(desc_array) > 2:
+						# desc_array[2] holds the Invoice ID to be matched; child[5].text holds the Amount transferred (Credit)
+						if desc_array[2] == invoice_id and float(child[5].text) == float(fAmount):
+							return {
+								"status": "paid",
+								"strDescription": child[4].text
+							}
+
+				except Exception as err:
+					if os.path.exists('getTransactions_res_child.txt'):
+						append_write = 'a' # append if already exists
+					else:
+						append_write = 'w' # make a new file if not
+					with open('getTransactions_res_child.txt', append_write) as file:
+						file.write("Error: " + str(err) + "\n Invoice: " + str(invoice_id) + " child[0]: " + str(child[0].text) + " child[4]: " + str(child[4].text) + " \n")
 
 	return {
 			"status": "unpaid"
