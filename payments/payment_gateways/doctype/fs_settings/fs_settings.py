@@ -1076,30 +1076,43 @@ def add_transfer_fs_credit_bill(bill):
 			# If FS transfer was successful,
 			# then create a Payment Entry and reconcile with the Sales Invoice
 
-			#if not invoice_doc.is_return:
-			bank_account = get_bank_cash_account("FS", invoice_doc.company)
+			try:
+				#if not invoice_doc.is_return:
+				bank_account = get_bank_cash_account("FS", invoice_doc.company)
 
-			pe = get_payment_entry(
-				dt = invoice_doc.doctype,
-				dn = invoice_doc.name,
-				bank_account = bank_account["account"],
-			)
-			pe.mode_of_payment = "FS"
-			pe.reference_no = payment_status.get("strDescription")
-			pe.reference_date = nowdate()
+				pe = get_payment_entry(
+					dt = invoice_doc.doctype,
+					dn = invoice_doc.name,
+					bank_account = bank_account["account"],
+				)
+				pe.mode_of_payment = "FS"
+				pe.reference_no = payment_status.get("strDescription")
+				pe.reference_date = nowdate()
 
-			if invoice_doc.is_return:
-				pe.paid_amount = pe.received_amount = fAmount
-				pe.payment_type = "Pay"
+				if invoice_doc.is_return:
+					pe.paid_amount = pe.received_amount = fAmount
+					pe.payment_type = "Pay"
 
-			pe.custom_fs_transfer_status = "OK - Paid"
-			#pe.custom_remarks = 1
-			pe.remarks = "OK - Paid"
+				pe.custom_fs_transfer_status = "OK - Paid"
+				#pe.custom_remarks = 1
+				pe.remarks = "OK - Paid"
 
-			pe.insert(ignore_permissions=True)
-			pe.submit()
+				pe.insert(ignore_permissions=True)
+				pe.submit()
 
-			return "OK - Paid"
+			except Exception as err:
+				if str(err) == _("{0} {1} has already been fully paid.").format(
+									invoice_doc.doctype, invoice_doc.name):
+					frappe.db.set_value(invoice_doc.doctype, invoice_doc.name, {
+						"paid_amount": invoice_doc.grand_total,
+						"outstanding_amount": 0,
+						"status": "Paid"
+					})
+
+			else:
+				return "OK"
+
+			return "OK"
 
 		""" integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_doc.name}, "name")
 		if integration_request_existing and invoice_doc.custom_fs_transfer_status != "Retry-Payment":
