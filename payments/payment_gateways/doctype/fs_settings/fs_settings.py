@@ -436,17 +436,17 @@ def refund_fs_payments(doc, method):
 
 			match doc.company:
 				case "Pour Tous Canteen":
-					strDescription = _("PTC/{0}/{1}").format(trans_date, doc.name)
+					strDescription = _("PTC/{0}/{1}").format(trans_date, doc.references[0].reference_name)
 				case "Pour Tous Purchasing Service":
-					strDescription = _("PTPS/{0}/{1}").format(trans_date, doc.name)
+					strDescription = _("PTPS/{0}/{1}").format(trans_date, doc.references[0].reference_name)
 				case "Auroville Bakery":
-					strDescription = _("AVBK/{0}/{1}").format(trans_date, doc.name)
+					strDescription = _("AVBK/{0}/{1}").format(trans_date, doc.references[0].reference_name)
 				case "AV Bakery Cafe":
-					strDescription = _("AVBC/{0}/{1}").format(trans_date, doc.name)
+					strDescription = _("AVBC/{0}/{1}").format(trans_date, doc.references[0].reference_name)
 				case "AV Bakery Cafe Townhall":
-					strDescription = _("ABCT/{0}/{1}").format(trans_date, doc.name)
+					strDescription = _("ABCT/{0}/{1}").format(trans_date, doc.references[0].reference_name)
 				case _:
-					strDescription = _("{0}/{1}").format(trans_date, doc.name)
+					strDescription = _("{0}/{1}").format(trans_date, doc.references[0].reference_name)
 
 			payment_dict = {
 				'reference_doctype': doc.doctype,
