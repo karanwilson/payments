@@ -21,7 +21,7 @@ class UPISettings(Document):
 	cancel_txs_url = "https://iciciapi.lyra-network.in/erpservice/ERP/CancelTxn"
 	callback_check_status_url = "https://iciciapi.lyra-network.in/erpservice/ERP/CallbackStatusCheck"
 
-	webhook_callback_url = "https://pourtous-av.in/api/method/payments.payment_gateways.doctype.upi_settings.upi_settings.icici_webhook_callback"
+	#webhook_callback_url = "https://pourtous-av.in/api/method/payments.payment_gateways.doctype.upi_settings.upi_settings.icici_webhook_callback"
 
 
 	def	validate(self):
@@ -176,7 +176,7 @@ def icici_webhook_callback(integration_request_name=None):
 		if webhook_request_log_existing:
 			webhook_request_log = frappe.get_doc("Webhook Request Log", webhook_request_log_existing)
 			return {
-				"custom_upi_transfer_status": webhook_request_log.response.get("TxnStatus"),
+				"custom_pos_transfer_status": webhook_request_log.response.get("TxnStatus"),
 				"TranType": webhook_request_log.response.get("TranType"),
 				"ErpTranId": webhook_request_log.response.get("ErpTranId"),
 				"TranId": webhook_request_log.response.get("TranId")
@@ -205,7 +205,7 @@ def icici_webhook_callback(integration_request_name=None):
 
 		if "ErpTranId" in upi_response and upi_response.get("ErpTranId") == integration_request_name:
 			return {
-				"custom_upi_transfer_status": upi_response.get("TxnStatus"),
+				"custom_pos_transfer_status": upi_response.get("TxnStatus"),
 				"TranType": upi_response.get("TranType"),
 				"ErpTranId": upi_response.get("ErpTranId"),
 				"TranId": upi_response.get("TranId")
@@ -266,7 +266,7 @@ def get_upi_confirmation(bill_no, tran_type, erp_tran_id, before_push_txn=False)
 			integration_request.status = "Completed"
 			integration_request.save(ignore_permissions=True)
 			return {
-				"custom_upi_transfer_status": res.get("ResponseDesc"),
+				"custom_pos_transfer_status": res.get("ResponseDesc"),
 				"ResponseCode": res.get("ResponseCode"),
 				"ResponseDesc": res.get("ResponseDesc"),
 				"ErpTranId": res.get("RspData").get("ErpTranId"),
@@ -307,7 +307,7 @@ def push_txn(invoice_doc, tran_type, amount, tip):
 
 		return {
 			"ir_status": integration_request.status,
-			"custom_upi_transfer_status": data.get("ResponseDesc"),
+			"custom_pos_transfer_status": data.get("ResponseDesc"),
 			"ResponseCode": data.get("ResponseCode"),
 			"ResponseDesc": data.get("ResponseDesc"),
 			"ErpTranId": data.get("RspData").get("ErpTranId"),
@@ -343,7 +343,7 @@ def push_txn(invoice_doc, tran_type, amount, tip):
 						integration_request.save(ignore_permissions=True)
 
 						return {
-							"custom_upi_transfer_status": res.get("ResponseDesc"),
+							"custom_pos_transfer_status": res.get("ResponseDesc"),
 							"ResponseCode": res.get("ResponseCode"),
 							"ResponseDesc": res.get("ResponseDesc"),
 							"ErpTranId": res.get("RspData").get("ErpTranId"),
