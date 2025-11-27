@@ -28,7 +28,8 @@ class UPISettings(Document):
 		create_payment_gateway("UPI")
 		call_hook_method("payment_gateway_enabled", gateway="UPI")
 
-		self.erp_callback_api_token = self.erp_callback_api_key + ':' + self.get_password(fieldname="erp_callback_api_secret", raise_exception=False)
+		if self.erp_callback_api_key and self.erp_callback_api_secret:
+			self.erp_callback_api_token = self.erp_callback_api_key + ':' + self.get_password(fieldname="erp_callback_api_secret", raise_exception=False)
 		#if not self.flags.ignore_mandatory:
 		#	self.validate_upi_credentials()
 
