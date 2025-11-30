@@ -271,18 +271,23 @@ def get_upi_confirmation(bill_no, tran_type, erp_tran_id, before_push_txn=False)
 				"ResponseCode": res.get("ResponseCode"),
 				"ResponseDesc": res.get("ResponseDesc"),
 				"ErpTranId": res.get("RspData").get("ErpTranId"),
-				"TranId": res.get("RspData").get("TranId")
+				"TranId": res.get("RspData").get("TranId"),
+				"TranType": res.get("RspData").get("TranType")
 			}
 
 		elif res.get("ResponseCode") == "02" or res.get("ResponseDesc") == "Invalid MID/TID.":
 			integration_request.status = "Failed"
 			integration_request.save(ignore_permissions=True)
 			return res
-	
+
 		else:
 			return res
 
-	# else:
+	else:
+		return {
+			"ResponseCode": "XXX",
+			"ResponseDesc": "Did not receive ResponseCode or ResponseDesc",
+		}
 	# 	integration_request.status = "Failed"
 	# 	integration_request.save(ignore_permissions=True)
 	# else:
@@ -312,7 +317,8 @@ def push_txn(invoice_doc, tran_type, amount, tip):
 			"ResponseCode": data.get("ResponseCode"),
 			"ResponseDesc": data.get("ResponseDesc"),
 			"ErpTranId": data.get("RspData").get("ErpTranId"),
-			"TranId": data.get("RspData").get("TranId")
+			"TranId": data.get("RspData").get("TranId"),
+			"TranType": data.get("RspData").get("TranType")
 		}
 
 	else:
@@ -344,11 +350,13 @@ def push_txn(invoice_doc, tran_type, amount, tip):
 						integration_request.save(ignore_permissions=True)
 
 						return {
+							"ir_status": integration_request.status,
 							"custom_pos_transfer_status": res.get("ResponseDesc"),
 							"ResponseCode": res.get("ResponseCode"),
 							"ResponseDesc": res.get("ResponseDesc"),
 							"ErpTranId": res.get("RspData").get("ErpTranId"),
-							"TranId": res.get("RspData").get("TranId")
+							"TranId": res.get("RspData").get("TranId"),
+							"TranType": res.get("RspData").get("TranType")
 						}
 
 					elif res.get("ResponseCode") == "02" or res.get("ResponseDesc") == "Invalid MID/TID.":
@@ -382,7 +390,7 @@ def push_txn(invoice_doc, tran_type, amount, tip):
 	}
 
 	# Create integration log
-	integration_request = create_request_log(payment_dict, service_name="UPI")
+	integration_request = create_request_log(payment_dict, service_name="ICICI-POS")
 
 	data = {
 		"mid": icici_controller.mid,
@@ -410,6 +418,7 @@ def push_txn(invoice_doc, tran_type, amount, tip):
 	return {
 		"ResponseCode": res.get("ResponseCode"),
 		"ResponseDesc": res.get("ResponseDesc"),
+		"tran_type": res.get("tran_type"),
 		"erp_tran_id": integration_request.name
 	}
 
