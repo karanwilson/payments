@@ -262,7 +262,7 @@ def get_upi_confirmation(bill_no, tran_type, erp_tran_id, before_push_txn=False)
 		return res
 
 	if "ResponseCode" and "ResponseDesc" in res:
-		if res.get("ResponseCode") == "00" or res.get("ResponseDesc") == "SUCCESS":
+		if res.get("ResponseCode") == "00" or res.get("ResponseDesc") in ("SUCCESS", "Approved or completed successfully"):
 			integration_request.output = json.dumps(res) # converting dict to json for storage
 			integration_request.status = "Completed"
 			integration_request.save(ignore_permissions=True)
