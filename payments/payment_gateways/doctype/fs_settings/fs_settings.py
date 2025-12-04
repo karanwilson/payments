@@ -166,7 +166,12 @@ def logout():
 def fetch_fs_accounts_detail():
 	fs_controller = frappe.get_doc("FS Settings")
 	login_res = fs_controller.fapi_login()
-	pour_tous_settings = frappe.get_doc("Pour Tous Settings")
+
+	credit_limit_av_account = None
+
+	if frappe.defaults.get_user_default("company") in ("Pour Tous Purchasing Service", "Pour Tous Canteen"):
+		pour_tous_settings = frappe.get_doc("Pour Tous Settings")
+		credit_limit_av_account = pour_tous_settings.credit_limit_av_account
 
 	if login_res["Result"] == "OK":
 		accountsRange = fs_controller.fetch_fs_accounts_data()
@@ -186,7 +191,7 @@ def fetch_fs_accounts_detail():
 				"Result": accountsRange["Result"],
 				"RecordCount": accountsRange["RecordCount"],
 				"Accounts": accounts_dict,
-				"credit_limit_av_account": pour_tous_settings.credit_limit_av_account
+				"credit_limit_av_account": credit_limit_av_account
 			}
 
 		else:
