@@ -166,6 +166,7 @@ def logout():
 def fetch_fs_accounts_detail():
 	fs_controller = frappe.get_doc("FS Settings")
 	login_res = fs_controller.fapi_login()
+	pour_tous_settings = frappe.get_doc("Pour Tous Settings")
 
 	if login_res["Result"] == "OK":
 		accountsRange = fs_controller.fetch_fs_accounts_data()
@@ -184,9 +185,10 @@ def fetch_fs_accounts_detail():
 			return {
 				"Result": accountsRange["Result"],
 				"RecordCount": accountsRange["RecordCount"],
-				"Accounts": accounts_dict
+				"Accounts": accounts_dict,
+				"credit_limit_av_account": pour_tous_settings.credit_limit_av_account
 			}
-		
+
 		else:
 			frappe.msgprint(str(accountsRange))
 
