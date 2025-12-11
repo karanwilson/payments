@@ -1083,7 +1083,7 @@ def fetch_fs_credit_bills():
     )
 
 @frappe.whitelist()
-def add_transfer_fs_credit_bill(bill):
+def add_transfer_fs_credit_bill(bill, pe=None):
 	invoice_doc = frappe.get_doc("Sales Invoice", bill)
 	if invoice_doc.is_return:
 		fAmount = invoice_doc.grand_total
@@ -1114,6 +1114,13 @@ def add_transfer_fs_credit_bill(bill):
 			# If FS transfer was successful,
 			# then create a Payment Entry and reconcile with the Sales Invoice
 
+			if pe:
+				return {
+					"custom_fs_transfer_status": "OK - Paid",
+					"reference_no": payment_status.get("strDescription"),
+					"remarks": "OK - Paid"
+				}
+
 			try:
 				#if not invoice_doc.is_return:
 				bank_account = get_bank_cash_account("FS", invoice_doc.company)
@@ -1132,7 +1139,7 @@ def add_transfer_fs_credit_bill(bill):
 					pe.payment_type = "Pay"
 
 				pe.custom_fs_transfer_status = "OK - Paid"
-				#pe.custom_remarks = 1
+				pe.custom_remarks = 1
 				pe.remarks = "OK - Paid"
 
 				pe.insert(ignore_permissions=True)
@@ -1146,6 +1153,8 @@ def add_transfer_fs_credit_bill(bill):
 						"outstanding_amount": 0,
 						"status": "Paid"
 					})
+				else:
+					raise err
 
 			else:
 				return "OK"
@@ -1315,6 +1324,13 @@ def add_transfer_fs_credit_bill(bill):
 				# If FS transfer was successful,
 				# then create a Payment Entry and reconcile with the Sales Invoice
 
+				if pe:
+					return {
+						"custom_fs_transfer_status": addTransfer_res["Result"],
+						"reference_no": payment_dict["strDescription"],
+						"remarks": addTransfer_res["Result"]
+					}
+
 				#if not invoice_doc.is_return:
 				bank_account = get_bank_cash_account("FS", invoice_doc.company)
 
@@ -1371,190 +1387,3 @@ def add_transfer_fs_credit_bill(bill):
 			title='Error',
 		)
 		return
-
-
-#@frappe.whitelist()
-#def add_transfer_fs_draft_bills():
-	# for Offline FS bills
-
-	""" match year:
-		case "Current":
-			year = date.today().year
-		case "Previous":
-			year = date.today().year - 1
-		case "Previous-1":
-			year = date.today().year - 2 """
-
-#	draft_fs_bills = frappe.db.sql(
-#		"""
-#		SELECT name
-#		FROM `tabSales Invoice`
-#		WHERE docstatus = 0 AND NOT custom_fs_transfer_status = "OK" AND custom_fs_transfer_status IS NOT NULL
-#		""",
-#		as_dict=1,
-#	)
-
-	""" if draft_fs_bills:
-		fs_controller = frappe.get_doc("FS Settings")
-		#fs_bulk_trans_doc = frappe.get_doc("FS Bulk Transfer", doc_name.replace("new-fs-bulk-transfer-", ""))
-
-		for bill in draft_fs_bills:
-			invoice_doc = frappe.get_doc("Sales Invoice", bill)
-	
-			integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_doc.name, "status": "completed"}, "name")
-			if integration_request_existing:
-				continue
-
-			cust_fs_acc_number = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
-			if not cust_fs_acc_number:
-				frappe.throw(str(invoice_doc.customer))
-
-			login_res = fs_controller.fapi_login()
-			if login_res["Result"] == "OK":
-
-				if fs_controller.production:
-					fs_service_proxy = fs_controller.production_service
-				else:
-					fs_service_proxy = fs_controller.staging_service
-
-				fAmount = invoice_doc.total
-				if fAmount > 0:
-					strAccountNumberFrom = cust_fs_acc_number
-					strAccountNumberTo = fs_controller.fs_account
-
-					accountMaxAmount_res = fs_service_proxy.getAccountMaxAmount(strAccountNumberFrom)
-					if accountMaxAmount_res["Result"] == "OK":
-						#accountMaxAmount = float(accountMaxAmount_res["maxAmount"])
-						#if fAmount > accountMaxAmount and accountMaxAmount != -1:
-						if fAmount > float(accountMaxAmount_res["maxAmount"]):
-							invoice_doc.custom_fs_transfer_status = "Insufficient Funds"
-							invoice_doc.custom_fs_account_number = strAccountNumberFrom
-							invoice_doc.outstanding_amount = fAmount # for "Credit Sale"
-							invoice_doc.due_date = get_last_day_of_Month()
-
-							invoice_doc.save()
-							invoice_doc.submit()
-
-							continue
-					else:
-						frappe.throw(accountMaxAmount_res["Result"])
-
-				else:
-					# in case of returns, the amount will be a negative value,
-					# hence convert it to postive, and swap the from/to FS account numbers, to make a return transfer
-					fAmount = abs(fAmount)
-					strAccountNumberFrom = fs_controller.fs_account
-					strAccountNumberTo = cust_fs_acc_number
-
-				transfer_token = fs_controller.request_transfer_token()
-				if transfer_token:
-					if invoice_doc.custom_transaction_date:
-						trans_date = invoice_doc.custom_transaction_date
-					else:
-						trans_date = invoice_doc.creation.date()
-
-					match invoice_doc.company:
-						case "Pour Tous Canteen":
-							strDescription = _("PTC/{0}/{1}").format(trans_date, invoice_doc.name)
-						case "Pour Tous Purchasing Service":
-							strDescription = _("PTPS/{0}/{1}").format(trans_date, invoice_doc.name)
-						case "Auroville Bakery":
-							strDescription = _("AVBK/{0}/{1}").format(trans_date, invoice_doc.name)
-						case _:
-							strDescription = _("{0}/{1}").format(trans_date, invoice_doc.name)
-
-					payment_dict = {
-						'reference_doctype': invoice_doc.doctype,
-						'reference_docname': invoice_doc.name,
-						"Customer Name": invoice_doc.customer_name,
-						"Customer ID": invoice_doc.customer,
-						#"Payment Name": "",
-						#"Payment ID": ,
-						"strAccountNumberFrom": strAccountNumberFrom,
-						"strAccountNumberTo": strAccountNumberTo,
-						"fAmount": str(fAmount),
-						# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
-						# string[0:5] extracts the first 5 chars of the string
-						"strDescription": strDescription,
-						"check": "Yes",
-						"token": transfer_token
-					}
-
-					integration_request = None
-
-					# if exists, fetch the existing integration request for this "Payment Entry" doc
-					for integration_request_existing in frappe.get_all(
-						"Integration Request",
-						filters={"status": "Queued", "integration_request_service": "FS", },
-						fields=["name", "data"],
-					):
-						data = json.loads(integration_request_existing.data)
-						if data["Payment ID"] == invoice_doc.name :
-							integration_request = frappe.get_doc("Integration Request", integration_request_existing)
-							#payment_dict_json = frappe.as_json(payment_dict, indent=1)
-							#frappe.db.set_value("Integration Request", integration_request_existing.name, "data", payment_dict_json)
-							break
-
-					# Create an "Integration Request" in case of a fresh transfer
-					if not integration_request:
-						# Create integration log
-						integration_request = create_request_log(payment_dict, service_name="FS")
-
-					# appending the integration_request name field as Transaction ID in strDescription
-					payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
-
-					# adding a dummy remark here in order to be able to save the invoice before initiating an FS payment
-					# so that in case this iteration breaks due to an Item batch QTY insufficient message - the FS transaction should not go through before that.
-					try:
-						invoice_doc.remarks = "Saving this doc, before attempting an FS Transaction"
-						invoice_doc.save()
-					except:
-						frappe.throw("Error (Could be due to Batch availability)")
-
-					addTransfer_res = fs_service_proxy.addTransfer(
-						payment_dict["strAccountNumberFrom"],
-						payment_dict["strAccountNumberTo"],
-						payment_dict["fAmount"],
-						payment_dict["strDescription"],
-						payment_dict["check"],
-						payment_dict["token"]
-					)
-
-					if addTransfer_res["Result"] == "OK":
-						integration_request.status = "Completed"
-						integration_request.save(ignore_permissions=True)
-						frappe.db.commit()
-
-						#invoice_doc.payments[0].mode_of_payment = "FS"
-						#invoice_doc.payments[0].amount = fAmount
-						for payment in invoice_doc.payments:
-							if payment.mode_of_payment == "FS":
-								payment.amount = fAmount
-								break
-
-						invoice_doc.paid_amount = fAmount
-						invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
-						invoice_doc.custom_fs_account_number = payment_dict["strAccountNumberFrom"]
-						invoice_doc.remarks = addTransfer_res["Message"]
-
-						invoice_doc.save()
-						invoice_doc.submit()
-
-					else:
-						integration_request.status = "Failed"
-						integration_request.save(ignore_permissions=True)
-						frappe.db.commit()
-
-						invoice_doc.custom_fs_transfer_status = addTransfer_res["Result"]
-						invoice_doc.remarks = addTransfer_res["Message"]
-						invoice_doc.due_date = get_last_day_of_Month()
-
-						invoice_doc.save()
-
-				else:
-					frappe.throw("FS transfer token not received")
-
-			else:
-				frappe.throw(login_res["Result"])
-
-	return """
