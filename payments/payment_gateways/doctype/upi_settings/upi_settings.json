@@ -8,7 +8,10 @@
  "engine": "InnoDB",
  "field_order": [
   "mid",
-  "tid",
+  "erp_user_id_1",
+  "tid_1",
+  "erp_user_id_2",
+  "tid_2",
   "source_id",
   "erp_client_id",
   "erp_callback_user_id",
@@ -28,11 +31,6 @@
    "fieldname": "mid",
    "fieldtype": "Data",
    "label": "MID"
-  },
-  {
-   "fieldname": "tid",
-   "fieldtype": "Data",
-   "label": "TID"
   },
   {
    "fieldname": "source_id",
@@ -75,12 +73,38 @@
    "fieldtype": "Link",
    "label": "Transaction Fee Account",
    "options": "Account"
+  },
+  {
+   "fieldname": "erp_user_id_1",
+   "fieldtype": "Link",
+   "label": "ERP User ID 1",
+   "options": "ICICI POS TID"
+  },
+  {
+   "fetch_from": "erp_user_id_1.tid",
+   "fieldname": "tid_1",
+   "fieldtype": "Data",
+   "label": "TID 1",
+   "read_only": 1
+  },
+  {
+   "fieldname": "erp_user_id_2",
+   "fieldtype": "Link",
+   "label": "ERP User ID 2",
+   "options": "ICICI POS TID"
+  },
+  {
+   "fetch_from": "erp_user_id_2.tid",
+   "fieldname": "tid_2",
+   "fieldtype": "Data",
+   "label": "TID 2",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-10-11 12:11:30.246472",
+ "modified": "2025-12-05 21:08:25.207973",
  "modified_by": "Administrator",
  "module": "Payment Gateways",
  "name": "UPI Settings",
