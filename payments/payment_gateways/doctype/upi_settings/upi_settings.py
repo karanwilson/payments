@@ -126,10 +126,17 @@ class UPISettings(Document):
 def icici_check_service():
 	icici_controller = frappe.get_doc("UPI Settings")
 
+	if frappe.defaults.get_user_default("company") in (
+		"Auroville Bakery", "AV Bakery Cafe", "AV Bakery Cafe Townhall"
+	):
+		mapped_tid = frappe.db.get_value("ICICI POS TID", {'erp_user_id': frappe.session.user}, 'tid')
+	else:
+		mapped_tid = icici_controller.tid
+
 	# Sample Data to check service availability
 	data = {
 		"mid": icici_controller.mid,
-		"tid": icici_controller.tid_1,
+		"tid": mapped_tid,
 		"tran_type": 16,
 		"bill_no": "123456",
 		"erp_tran_id": "240230025530444",
@@ -241,7 +248,13 @@ def get_upi_confirmation(bill_no, tran_type, erp_tran_id, before_push_txn=False)
 	# else:
 
 	icici_controller = frappe.get_doc("UPI Settings")
-	mapped_tid = frappe.db.get_value("ICICI POS TID", {'erp_user_id': frappe.session.user}, 'tid')
+
+	if frappe.defaults.get_user_default("company") in (
+		"Auroville Bakery", "AV Bakery Cafe", "AV Bakery Cafe Townhall"
+	):
+		mapped_tid = frappe.db.get_value("ICICI POS TID", {'erp_user_id': frappe.session.user}, 'tid')
+	else:
+		mapped_tid = icici_controller.tid
 
 	integration_request = frappe.get_doc("Integration Request", erp_tran_id)
 
@@ -302,7 +315,13 @@ def push_txn(invoice_doc, tran_type, amount, tip):
 
 	integration_request = None
 	icici_controller = frappe.get_doc("UPI Settings")
-	mapped_tid = frappe.db.get_value("ICICI POS TID", {'erp_user_id': frappe.session.user}, 'tid')
+
+	if frappe.defaults.get_user_default("company") in (
+		"Auroville Bakery", "AV Bakery Cafe", "AV Bakery Cafe Townhall"
+	):
+		mapped_tid = frappe.db.get_value("ICICI POS TID", {'erp_user_id': frappe.session.user}, 'tid')
+	else:
+		mapped_tid = icici_controller.tid
 
 	integration_request_existing = frappe.get_value("Integration Request", {
 		"reference_docname": invoice_dict["name"],
@@ -429,7 +448,13 @@ def push_txn(invoice_doc, tran_type, amount, tip):
 @frappe.whitelist()
 def cancel_txn(bill_no, tran_type, erp_tran_id):
 	icici_controller = frappe.get_doc("UPI Settings")
-	mapped_tid = frappe.db.get_value("ICICI POS TID", {'erp_user_id': frappe.session.user}, 'tid')
+
+	if frappe.defaults.get_user_default("company") in (
+		"Auroville Bakery", "AV Bakery Cafe", "AV Bakery Cafe Townhall"
+	):
+		mapped_tid = frappe.db.get_value("ICICI POS TID", {'erp_user_id': frappe.session.user}, 'tid')
+	else:
+		mapped_tid = icici_controller.tid
 
 	integration_request = frappe.get_doc("Integration Request", erp_tran_id)
 

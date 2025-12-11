@@ -8,6 +8,7 @@
  "engine": "InnoDB",
  "field_order": [
   "mid",
+  "tid",
   "erp_user_id_1",
   "tid_1",
   "erp_user_id_2",
@@ -99,12 +100,17 @@
    "fieldtype": "Data",
    "label": "TID 2",
    "read_only": 1
+  },
+  {
+   "fieldname": "tid",
+   "fieldtype": "Data",
+   "label": "TID"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-12-05 21:08:25.207973",
+ "modified": "2025-12-11 13:27:20.610136",
  "modified_by": "Administrator",
  "module": "Payment Gateways",
  "name": "UPI Settings",
