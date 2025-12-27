@@ -1091,8 +1091,11 @@ def fetch_fs_credit_bills():
     	"""
 		SELECT name
 		FROM `tabSales Invoice`
-		WHERE (docstatus = 1 AND status IN ("Unpaid", "Overdue", "Partly Paid", "Return") AND custom_fs_transfer_status NOT LIKE "OK%")
-		OR (docstatus = 1 AND status IN ("Unpaid", "Overdue") AND custom_fs_transfer_status LIKE "OK - Paid%")
+		WHERE (docstatus = 1 AND status IN ("Unpaid", "Overdue", "Partly Paid", "Return")
+		AND custom_fs_transfer_status NOT LIKE "OK%"
+		AND (custom_fs_account_number IS NOT NULL AND (custom_customer_group IS NULL OR custom_customer_group IN ("Individual", "Bakery-discounts-30%", "Individual-no_discount"))))
+		OR (docstatus = 1 AND status IN ("Unpaid", "Overdue") AND custom_fs_transfer_status LIKE "OK - Paid%"
+		AND (custom_fs_account_number IS NOT NULL AND (custom_customer_group IS NULL OR custom_customer_group IN ("Individual", "Bakery-discounts-30%", "Individual-no_discount"))))
 	    """,
         #as_dict=1,
 		#AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "Retry-Payment", "Failed", "ERR101: Account number (to) '0373' is invalid.", "ERR095: Account (from) "102142" not Active (Suspended, Locked or Closed)");
