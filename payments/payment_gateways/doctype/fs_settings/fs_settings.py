@@ -403,6 +403,7 @@ def add_transfer_contribution(doc, method):
 	return
 
 
+@frappe.whitelist()
 def refund_fs_payments(doc, method):
 	if doc.doctype == "Payment Entry":
 		if doc.mode_of_payment == "FS":
