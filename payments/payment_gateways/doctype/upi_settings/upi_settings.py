@@ -129,13 +129,15 @@ def icici_check_service():
 	if frappe.defaults.get_user_default("company") in (
 		"Auroville Bakery", "AV Bakery Cafe", "AV Bakery Cafe Townhall"
 	):
+		mapped_mid = frappe.db.get_value("ICICI POS TID", {'erp_user_id': frappe.session.user}, 'mid')
 		mapped_tid = frappe.db.get_value("ICICI POS TID", {'erp_user_id': frappe.session.user}, 'tid')
 	else:
+		mapped_mid = icici_controller.mid
 		mapped_tid = icici_controller.tid
 
 	# Sample Data to check service availability
 	data = {
-		"mid": icici_controller.mid,
+		"mid": mapped_mid,
 		"tid": mapped_tid,
 		"tran_type": 16,
 		"bill_no": "123456",
@@ -252,14 +254,16 @@ def get_upi_confirmation(bill_no, tran_type, erp_tran_id, before_push_txn=False)
 	if frappe.defaults.get_user_default("company") in (
 		"Auroville Bakery", "AV Bakery Cafe", "AV Bakery Cafe Townhall"
 	):
+		mapped_mid = frappe.db.get_value("ICICI POS TID", {'erp_user_id': frappe.session.user}, 'mid')
 		mapped_tid = frappe.db.get_value("ICICI POS TID", {'erp_user_id': frappe.session.user}, 'tid')
 	else:
+		mapped_mid = icici_controller.mid
 		mapped_tid = icici_controller.tid
 
 	integration_request = frappe.get_doc("Integration Request", erp_tran_id)
 
 	data = {
-		"mid": icici_controller.mid,
+		"mid": mapped_mid,
 		"tid": mapped_tid,
 		"tran_type": tran_type,
 		"bill_no": bill_no[-6:],
@@ -319,8 +323,10 @@ def push_txn(invoice_doc, tran_type, amount, tip):
 	if frappe.defaults.get_user_default("company") in (
 		"Auroville Bakery", "AV Bakery Cafe", "AV Bakery Cafe Townhall"
 	):
+		mapped_mid = frappe.db.get_value("ICICI POS TID", {'erp_user_id': frappe.session.user}, 'mid')
 		mapped_tid = frappe.db.get_value("ICICI POS TID", {'erp_user_id': frappe.session.user}, 'tid')
 	else:
+		mapped_mid = icici_controller.mid
 		mapped_tid = icici_controller.tid
 
 	integration_request_existing = frappe.get_value("Integration Request", {
@@ -415,7 +421,7 @@ def push_txn(invoice_doc, tran_type, amount, tip):
 	integration_request = create_request_log(payment_dict, service_name="ICICI-POS")
 
 	data = {
-		"mid": icici_controller.mid,
+		"mid": mapped_mid,
 		"tid": mapped_tid,
 		"tran_type": tran_type,
 		"amount": amount,
@@ -452,14 +458,16 @@ def cancel_txn(bill_no, tran_type, erp_tran_id):
 	if frappe.defaults.get_user_default("company") in (
 		"Auroville Bakery", "AV Bakery Cafe", "AV Bakery Cafe Townhall"
 	):
+		mapped_mid = frappe.db.get_value("ICICI POS TID", {'erp_user_id': frappe.session.user}, 'mid')
 		mapped_tid = frappe.db.get_value("ICICI POS TID", {'erp_user_id': frappe.session.user}, 'tid')
 	else:
+		mapped_mid = icici_controller.mid
 		mapped_tid = icici_controller.tid
 
 	integration_request = frappe.get_doc("Integration Request", erp_tran_id)
 
 	data = {
-		"mid": icici_controller.mid,
+		"mid": mapped_mid,
 		"tid": mapped_tid,
 		"tran_type": tran_type,
 		"bill_no": bill_no[-6:],
