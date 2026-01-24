@@ -406,7 +406,7 @@ def add_transfer_contribution(doc, method):
 @frappe.whitelist()
 def refund_fs_payments(doc, method):
 	if doc.doctype == "Payment Entry":
-		if doc.mode_of_payment == "FS":
+		if doc.mode_of_payment == "FS" and doc.custom_receive_from_fs_api and (doc.remarks)[0:27] == "Received transfer request of":
 			strAccountNumberTo = frappe.get_value("Customer", doc.party, "custom_fs_account_number")
 			customer_name = doc.party_name
 			customer_id = doc.party
@@ -1102,6 +1102,7 @@ def fetch_fs_credit_bills():
 		#AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "Retry-Payment", "Failed", "ERR101: Account number (to) '0373' is invalid.", "ERR095: Account (from) "102142" not Active (Suspended, Locked or Closed)");
     )
 
+# Also called from payment entry (pe) hook/client-script
 @frappe.whitelist()
 def add_transfer_fs_credit_bill(bill, pe=None):
 	invoice_doc = frappe.get_doc("Sales Invoice", bill)
@@ -1173,13 +1174,14 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 						"outstanding_amount": 0,
 						"status": "Paid"
 					})
+					return "OK"
 				else:
-					raise err
+					frappe.throw(str(err))
 
 			else:
 				return "OK"
 
-			return "OK"
+			#return "OK"
 
 		""" integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_doc.name}, "name")
 		if integration_request_existing and invoice_doc.custom_fs_transfer_status != "Retry-Payment":
@@ -1214,7 +1216,10 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 				msg=login_res["Result"],
 				title='Error',
 			)
-			return
+			if pe:
+				frappe.throw(str(login_res["Result"]))
+			else:
+				return
 
 		if fs_controller.production:
 			fs_service_proxy = fs_controller.production_service
@@ -1233,7 +1238,10 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 					invoice_doc.custom_fs_transfer_status = "Insufficient Funds"
 					invoice_doc.save()
 					frappe.db.commit()
-					return
+					if pe:
+						frappe.throw("Insufficient Funds")
+					else:
+						return
 					# for incremental debits in case of insufficent funds for the full outstanding amount
 					#fAmount = float(accountMaxAmount_res["maxAmount"])
 				else:
@@ -1257,7 +1265,11 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 			invoice_doc.custom_fs_transfer_status = accountMaxAmount_res["Result"]
 			invoice_doc.save()
 			frappe.db.commit()
-			return
+
+			if pe:
+				frappe.throw(str(accountMaxAmount_res["Result"]))
+			else:
+				return
 
 		# FAPI stage-3
 		transfer_token = fs_controller.request_transfer_token()
@@ -1387,14 +1399,20 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 					title='Error',
 				)
 
-				return
+				if pe:
+					frappe.throw(str(addTransfer_res["Result"]))
+				else:
+					return
 
 		else:
-			frappe.msgprint(
-				msg="FS transfer token not received",
-				title='Error',
-			)
-			return
+			if pe:
+				frappe.throw("FS transfer token not received")
+			else:
+				frappe.msgprint(
+					msg="FS transfer token not received",
+					title='Error',
+				)
+				return
 
 	except Exception as err:
 		if integration_request:
@@ -1402,8 +1420,11 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 			integration_request.save(ignore_permissions=True)
 			frappe.db.commit()
 
-		frappe.msgprint(
-			msg=str(err),
-			title='Error',
-		)
-		return
+		if pe:
+			frappe.throw(str(err))
+		else:
+			frappe.msgprint(
+				msg=str(err),
+				title='Error',
+			)
+			return
