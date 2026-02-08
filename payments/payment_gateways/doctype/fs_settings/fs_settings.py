@@ -921,6 +921,7 @@ def add_transfer_sales_order(order):
 		# FAPI stage-1
 		login_res = fs_controller.fapi_login()
 		if login_res["Result"] != "OK":
+			frappe.msgprint(login_res["Result"])
 			return
 
 		if fs_controller.production:
@@ -936,6 +937,8 @@ def add_transfer_sales_order(order):
 			fAmount_float = float(fAmount) # converting to float for math comparisons
 			#if fAmount_float > 0:
 			if fAmount_float > float(accountMaxAmount_res["maxAmount"]):
+				frappe.msgprint("Insufficient Funds")
+				order_doc.custom_fs_transfer_status = accountMaxAmount_res["Result"]
 				return
 			else:
 				strAccountNumberFrom = order_doc.custom_fs_account_number
@@ -950,6 +953,7 @@ def add_transfer_sales_order(order):
 		transfer_token = fs_controller.request_transfer_token()
 
 		if not transfer_token:
+			frappe.msgprint("Transfer Token not received")
 			return
 
 		#trans_date = order_doc.transaction_date
@@ -1051,6 +1055,7 @@ def add_transfer_sales_order(order):
 			return addTransfer_res["Result"]
 
 		else:
+			frappe.msgprint(addTransfer_res["Result"])
 			integration_request.status = "Failed"
 			integration_request.save(ignore_permissions=True)
 			order_doc.custom_fs_transfer_status = addTransfer_res["Result"]
