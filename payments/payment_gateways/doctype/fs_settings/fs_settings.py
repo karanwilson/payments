@@ -404,7 +404,7 @@ def add_transfer_contribution(doc, method):
 
 
 @frappe.whitelist()
-def refund_fs_payments(doc, method):
+def refund_fs_payments(doc, method=None):
 	if doc.doctype == "Payment Entry":
 		if doc.mode_of_payment == "FS" and doc.custom_receive_from_fs_api and (doc.remarks)[0:27] == "Received transfer request of":
 			strAccountNumberTo = frappe.get_value("Customer", doc.party, "custom_fs_account_number")
@@ -415,13 +415,9 @@ def refund_fs_payments(doc, method):
 			return
 
 	elif doc.doctype == "Sales Invoice":
-		if doc.custom_fs_account_number:
-			strAccountNumberTo = frappe.get_value("Customer", doc.customer, "custom_fs_account_number")
-			customer_name = doc.customer_name
-			customer_id = doc.customer
-
-		else:
-			return
+		strAccountNumberTo = frappe.get_value("Customer", doc.customer, "custom_fs_account_number")
+		customer_name = doc.customer_name
+		customer_id = doc.customer
 
 	integration_request = None
 
