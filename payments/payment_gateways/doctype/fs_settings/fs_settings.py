@@ -528,13 +528,21 @@ def refund_fs_payments(doc, method=None):
 		raise err
 
 
+def verify_existing_integration_request(doc, method):
+	#if doc.is_new() == 1 and frappe.db.exists("Integration Request", {"reference_docname": doc.reference_docname}):
+	if frappe.db.exists("Integration Request", {"reference_docname": doc.reference_docname}):
+		frappe.throw("Duplicate Payment Request, please verify the previous payment status")
+
+
 @frappe.whitelist()
 def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 	invoice_dict = json.loads(invoice_doc)
 
 	integration_request = None
 
-	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_dict["name"]}, "name")
+	integration_request_existing = frappe.db.exists("Integration Request", {"reference_docname": invoice_dict["name"]})
+	#integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_dict["name"]}, "name")
+
 	if integration_request_existing:
 		integration_request = frappe.get_doc("Integration Request", integration_request_existing)
 		if integration_request.status == "Completed":
@@ -1118,9 +1126,20 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 	integration_request = None # initialising early, as it is referenced in the except clause
 
 	# if exists, fetch the existing integration request
-	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_doc.name}, "name")
+	integration_request_existing = frappe.db.exists("Integration Request", {"reference_docname": invoice_doc.name})
+	#integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_doc.name}, "name")
+
 	if integration_request_existing:
 		integration_request = frappe.get_doc("Integration Request", integration_request_existing)
+
+		if integration_request.status == "Completed":
+			data = json.loads(integration_request.data)
+			# appending the integration_request name field as Transaction ID in strDescription
+			remarks = _("{0}/{1}").format(data["strDescription"], integration_request.name)
+			invoice_doc.custom_fs_transfer_status = "OK - Paid"
+			invoice_doc.save()
+			frappe.db.commit()
+			return
 
 		res = get_transactions(fs_controller.fs_account, integration_request.creation.date().month, integration_request.creation.date().year)
 		payment_status = check_payment_status(res, invoice_doc.name, fAmount)
@@ -1178,7 +1197,8 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 					})
 					return "OK"
 				else:
-					frappe.throw(str(err))
+					raise err
+					#frappe.throw(str(err))
 
 			else:
 				return "OK"
