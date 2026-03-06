@@ -548,11 +548,16 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 		if integration_request.status == "Completed":
 			data = json.loads(integration_request.data)
 			# appending the integration_request name field as Transaction ID in strDescription
-			remarks = _("{0}/{1}").format(data["strDescription"], integration_request.name)
-			return {
-				"custom_fs_transfer_status": "OK",
-				"remarks": remarks
-			}
+			paid_fAmount = float(data["fAmount"])
+			if fAmount == paid_fAmount:
+				remarks = _("{0}/{1}").format(data["strDescription"], integration_request.name)
+				return {
+					"custom_fs_transfer_status": "OK",
+					"remarks": remarks
+				}
+			else:
+				frappe.throw("Attention: Invoice amount changed after Payment, kindly cancel the Invoice and re-enter")
+				return
 		else:
 			return {
 				"custom_fs_transfer_status": integration_request.status,
