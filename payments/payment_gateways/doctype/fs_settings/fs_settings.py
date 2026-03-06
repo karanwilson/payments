@@ -404,7 +404,7 @@ def add_transfer_contribution(doc, method):
 
 
 @frappe.whitelist()
-def refund_fs_payments(doc, method=None):
+def refund_fs_payments_pe(doc, method):
 	if doc.doctype == "Payment Entry":
 		if doc.mode_of_payment == "FS" and doc.custom_receive_from_fs_api and (doc.remarks)[0:27] == "Received transfer request of":
 			strAccountNumberTo = frappe.get_value("Customer", doc.party, "custom_fs_account_number")
@@ -413,11 +413,6 @@ def refund_fs_payments(doc, method=None):
 
 		else:
 			return
-
-	elif doc.doctype == "Sales Invoice":
-		strAccountNumberTo = frappe.get_value("Customer", doc.customer, "custom_fs_account_number")
-		customer_name = doc.customer_name
-		customer_id = doc.customer
 
 	integration_request = None
 
@@ -472,6 +467,122 @@ def refund_fs_payments(doc, method=None):
 			'reference_doctype': doc.doctype,
 			'reference_docname': doc.name,
 			"Customer Name":  customer_name,
+			"Customer ID": customer_id,
+			"strAccountNumberFrom": strAccountNumberFrom,
+			"strAccountNumberTo": strAccountNumberTo,
+			"fAmount": str(fAmount),
+			# String format example: PTDC/EXTRA.CON/PAY-2024-00859/CLSQ524OS7
+			# string[0:5] extracts the first 5 chars of the string
+			"strDescription": strDescription,
+			"check": "Yes",
+			"token": transfer_token
+		}
+
+		#with open('fapi.txt', 'w') as file:
+		#	file.write(str())
+
+		# Create integration log
+		integration_request = create_request_log(payment_dict, service_name="FS")
+
+		# appending the integration_request name field as Transaction ID in strDescription
+		payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
+
+		# FAPI stage-3
+		addTransfer_res = fs_service_proxy.addTransfer(
+			payment_dict["strAccountNumberFrom"],
+			payment_dict["strAccountNumberTo"],
+			payment_dict["fAmount"],
+			payment_dict["strDescription"],
+			payment_dict["check"],
+			payment_dict["token"]
+		)
+
+		if addTransfer_res["Result"] == "OK":
+			payment_dict["fs_transfer_response"] = addTransfer_res["Message"]
+
+			payment_dict_json = frappe.as_json(payment_dict, indent=1)
+			integration_request.data = payment_dict_json
+
+			integration_request.status = "Completed"
+			integration_request.save(ignore_permissions=True)
+
+		else:
+			integration_request.status = "Failed"
+			integration_request.save(ignore_permissions=True)
+
+		frappe.db.commit()
+		frappe.msgprint(addTransfer_res["Result"])
+		return integration_request.status
+
+	except Exception as err:
+		if integration_request:
+			integration_request.status = "Failed"
+			integration_request.save(ignore_permissions=True)
+			frappe.db.commit()
+
+		raise err
+
+
+@frappe.whitelist()
+def refund_fs_payments_si(invoice_name):
+	doc = frappe.get_doc("Sales Invoice", invoice_name)
+	strAccountNumberTo = frappe.get_value("Customer", doc.customer, "custom_fs_account_number")
+	customer_name = doc.customer_name
+	customer_id = doc.customer
+
+	integration_request = None
+
+	""" integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": doc.name}, "name")
+	if integration_request_existing:
+		integration_request = frappe.get_doc("Integration Request", integration_request_existing)
+		if integration_request.status == "Completed":
+			frappe.msgprint("Integration Request Exists!")
+			return """
+
+	fs_controller = frappe.get_doc("FS Settings")
+	if fs_controller.production:
+		fs_service_proxy = fs_controller.production_service
+	else:
+		fs_service_proxy = fs_controller.staging_service
+
+	try:
+		# FAPI stage-1
+		login_res = fs_controller.fapi_login()
+		if login_res["Result"] != "OK":
+			frappe.msgprint(login_res["Result"])
+			return
+
+		# FAPI stage-2
+		transfer_token = None
+		transfer_token = fs_controller.request_transfer_token()
+		if not transfer_token:
+			frappe.msgprint("FS transfer token not received")
+			return
+
+		fAmount = doc.paid_amount
+
+		strAccountNumberFrom = fs_controller.fs_account
+
+		trans_date = nowdate()
+
+		match doc.company:
+			case "Pour Tous Canteen":
+				strDescription = _("PTC/{0}/{1}").format(trans_date, doc.references[0].reference_name)
+			case "Pour Tous Purchasing Service":
+				strDescription = _("PTPS/{0}/{1}").format(trans_date, doc.references[0].reference_name)
+			case "Auroville Bakery":
+				strDescription = _("AVBK/{0}/{1}").format(trans_date, doc.references[0].reference_name)
+			case "AV Bakery Cafe":
+				strDescription = _("AVBC/{0}/{1}").format(trans_date, doc.references[0].reference_name)
+			case "AV Bakery Cafe Townhall":
+				strDescription = _("ABCT/{0}/{1}").format(trans_date, doc.references[0].reference_name)
+			case _:
+				strDescription = _("{0}/{1}").format(trans_date, doc.references[0].reference_name)
+
+		payment_dict = {
+			'reference_doctype': doc.doctype,
+			'reference_docname': doc.name,
+			"Customer Name": customer_name,
 			"Customer ID": customer_id,
 			"strAccountNumberFrom": strAccountNumberFrom,
 			"strAccountNumberTo": strAccountNumberTo,
