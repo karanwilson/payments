@@ -641,8 +641,9 @@ def refund_fs_payments_si(invoice_name):
 
 def verify_existing_integration_request(doc, method):
 	#if doc.is_new() == 1 and frappe.db.exists("Integration Request", {"reference_docname": doc.reference_docname}):
-	if frappe.db.exists("Integration Request", {"reference_docname": doc.reference_docname}):
-		frappe.throw("Duplicate Payment Request, please verify the previous payment status")
+	if frappe.defaults.get_user_default("company") != "Pour Tous Distribution Center":
+		if frappe.db.exists("Integration Request", {"reference_docname": doc.reference_docname}):
+			frappe.throw("Duplicate Payment Request, please verify the previous payment status")
 
 
 @frappe.whitelist()
