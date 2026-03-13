@@ -524,7 +524,7 @@ def refund_fs_payments_pe(doc, method):
 
 
 @frappe.whitelist()
-def refund_fs_payments_si(invoice_name):
+def refund_fs_payments_si(invoice_name, paid_fAmount):
 	doc = frappe.get_doc("Sales Invoice", invoice_name)
 	strAccountNumberTo = frappe.get_value("Customer", doc.customer, "custom_fs_account_number")
 	customer_name = doc.customer_name
@@ -559,7 +559,7 @@ def refund_fs_payments_si(invoice_name):
 			frappe.msgprint("FS transfer token not received")
 			return
 
-		fAmount = doc.paid_amount
+		fAmount = paid_fAmount
 
 		strAccountNumberFrom = fs_controller.fs_account
 
@@ -567,17 +567,17 @@ def refund_fs_payments_si(invoice_name):
 
 		match doc.company:
 			case "Pour Tous Canteen":
-				strDescription = _("PTC/{0}/{1}").format(trans_date, doc.references[0].reference_name)
+				strDescription = _("PTC/{0}/{1}").format(trans_date, doc.name)
 			case "Pour Tous Purchasing Service":
-				strDescription = _("PTPS/{0}/{1}").format(trans_date, doc.references[0].reference_name)
+				strDescription = _("PTPS/{0}/{1}").format(trans_date, doc.name)
 			case "Auroville Bakery":
-				strDescription = _("AVBK/{0}/{1}").format(trans_date, doc.references[0].reference_name)
+				strDescription = _("AVBK/{0}/{1}").format(trans_date, doc.name)
 			case "AV Bakery Cafe":
-				strDescription = _("AVBC/{0}/{1}").format(trans_date, doc.references[0].reference_name)
+				strDescription = _("AVBC/{0}/{1}").format(trans_date, doc.name)
 			case "AV Bakery Cafe Townhall":
-				strDescription = _("ABCT/{0}/{1}").format(trans_date, doc.references[0].reference_name)
+				strDescription = _("ABCT/{0}/{1}").format(trans_date, doc.name)
 			case _:
-				strDescription = _("{0}/{1}").format(trans_date, doc.references[0].reference_name)
+				strDescription = _("{0}/{1}").format(trans_date, doc.name)
 
 		payment_dict = {
 			'reference_doctype': doc.doctype,
@@ -641,7 +641,7 @@ def refund_fs_payments_si(invoice_name):
 
 def verify_existing_integration_request(doc, method):
 	#if doc.is_new() == 1 and frappe.db.exists("Integration Request", {"reference_docname": doc.reference_docname}):
-	if frappe.defaults.get_user_default("company") != "Pour Tous Distribution Center":
+	if doc.integration_request_service == 'FS':
 		if frappe.db.exists("Integration Request", {"reference_docname": doc.reference_docname}):
 			frappe.throw("Duplicate Payment Request, please verify the previous payment status")
 
