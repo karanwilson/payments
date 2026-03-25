@@ -649,6 +649,7 @@ def verify_existing_integration_request(doc, method):
 @frappe.whitelist()
 def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 	invoice_dict = json.loads(invoice_doc)
+	fAmount_float = float(fAmount) # converting to float in order to do math comparisons
 
 	integration_request = None
 
@@ -660,8 +661,7 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 		if integration_request.status == "Completed":
 			data = json.loads(integration_request.data)
 			# appending the integration_request name field as Transaction ID in strDescription
-			paid_fAmount = float(data["fAmount"])
-			if fAmount == paid_fAmount:
+			if fAmount_float == float(data["fAmount"]):
 				remarks = _("{0}/{1}").format(data["strDescription"], integration_request.name)
 				return {
 					"custom_fs_transfer_status": "OK",
@@ -702,7 +702,6 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 					"remarks": "Null"
 				}
 
-			fAmount_float = float(fAmount) # converting to float in order to do check for negative amounts below
 			if fAmount_float > 0:
 				if fAmount_float > float(fs_acc_balance):
 					return {
