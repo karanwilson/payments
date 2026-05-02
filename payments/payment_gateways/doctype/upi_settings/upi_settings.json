@@ -1,0 +1,134 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-11-07 23:11:24.827650",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "mid",
+  "tid",
+  "erp_user_id_1",
+  "tid_1",
+  "erp_user_id_2",
+  "tid_2",
+  "source_id",
+  "erp_client_id",
+  "erp_callback_user_id",
+  "erp_callback_api_key",
+  "erp_callback_api_secret",
+  "erp_callback_api_token",
+  "transaction_fee_account",
+  "test"
+ ],
+ "fields": [
+  {
+   "fieldname": "erp_client_id",
+   "fieldtype": "Data",
+   "label": "ERP Client iD"
+  },
+  {
+   "fieldname": "mid",
+   "fieldtype": "Data",
+   "label": "MID"
+  },
+  {
+   "fieldname": "source_id",
+   "fieldtype": "Data",
+   "label": "Source ID"
+  },
+  {
+   "description": "ERP User",
+   "fieldname": "erp_callback_api_key",
+   "fieldtype": "Data",
+   "label": "ERP Callback API Key"
+  },
+  {
+   "description": "ERP User",
+   "fieldname": "erp_callback_api_secret",
+   "fieldtype": "Password",
+   "label": "ERP Callback API Secret"
+  },
+  {
+   "fieldname": "erp_callback_api_token",
+   "fieldtype": "Data",
+   "label": "ERP Callback API Token",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "check/uncheck to set this doc as 'unsaved'",
+   "fieldname": "test",
+   "fieldtype": "Check",
+   "label": "Test"
+  },
+  {
+   "fieldname": "erp_callback_user_id",
+   "fieldtype": "Data",
+   "label": "ERP Callback User ID",
+   "options": "Email"
+  },
+  {
+   "fieldname": "transaction_fee_account",
+   "fieldtype": "Link",
+   "label": "Transaction Fee Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "erp_user_id_1",
+   "fieldtype": "Link",
+   "label": "ERP User ID 1",
+   "options": "ICICI POS TID"
+  },
+  {
+   "fetch_from": "erp_user_id_1.tid",
+   "fieldname": "tid_1",
+   "fieldtype": "Data",
+   "label": "TID 1",
+   "read_only": 1
+  },
+  {
+   "fieldname": "erp_user_id_2",
+   "fieldtype": "Link",
+   "label": "ERP User ID 2",
+   "options": "ICICI POS TID"
+  },
+  {
+   "fetch_from": "erp_user_id_2.tid",
+   "fieldname": "tid_2",
+   "fieldtype": "Data",
+   "label": "TID 2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tid",
+   "fieldtype": "Data",
+   "label": "TID"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-12-11 13:27:20.610136",
+ "modified_by": "Administrator",
+ "module": "Payment Gateways",
+ "name": "UPI Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

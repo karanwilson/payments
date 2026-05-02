@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<wsdl:definitions
+                  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+                  xmlns:tns="urn:assets/payments/FS"
+                  SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+                  xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+                  xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+                  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  name="FS"
+                  targetNamespace="urn:assets/payments/FS">
+
+  <wsdl:documentation>Definition of a Web API service for AV FS.</wsdl:documentation>
+
+  <!--
+      The `types` element defines the data types (XML elements)
+      that are used by the web service.
+   -->
+  <wsdl:types>
+    <xsd:schema targetNamespace="urn:assets/payments/FS">
+          <xsd:complexType name="LoginResponse">
+            <xsd:sequence>
+              <xsd:element name="Result" type="xsd:string"/>
+              <xsd:element name="ValidAccounts" type="xsd:string" minOccurs="0" maxOccurs="unbounded"/>
+              <xsd:element name="ExtraInfo" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:complexType>
+
+          <xsd:complexType name="TokenRequest">
+            <xsd:sequence>
+              <xsd:element name="transferToken" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:complexType>
+
+          <xsd:complexType name="Response">
+            <xsd:sequence>
+              <xsd:element name="Result" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:complexType>
+
+          <xsd:complexType name="rangeRequest">
+            <xsd:sequence>
+              <xsd:element name="accountRange" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:complexType>
+          <xsd:complexType name="rangeResponse">
+            <xsd:sequence>
+              <xsd:element name="Result" type="xsd:string"/>
+              <xsd:element name="RecordCount" type="xsd:string"/>
+              <xsd:element name="Accounts" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:complexType>
+
+          <xsd:complexType name="TransferResponse">
+            <xsd:sequence>
+              <xsd:element name="Result" type="xsd:string"/>
+              <xsd:element name="Message" type="xsd:string"/>
+              <!-- <xsd:element name="maxAmount" type="xsd:string"/> -->
+            </xsd:sequence>
+          </xsd:complexType>
+
+          <xsd:complexType name="MaxAmountResponse">
+            <xsd:sequence>
+              <xsd:element name="Result" type="xsd:string"/>
+              <xsd:element name="maxAmount" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:complexType>
+
+          <xsd:complexType name="accountTransactionsResponse">
+            <xsd:sequence>
+              <xsd:element name="Result" type="xsd:string"/>
+              <!-- <xsd:element name="Message" type="xsd:string"/> -->
+              <xsd:element name="Transactions" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:complexType>
+    </xsd:schema>
+  </wsdl:types>
+
+  <!--
+      A wsdl `message` element is used to define a message
+      exchanged between a web service, consisting of zero
+      or more `part`s.
+   -->
+  <wsdl:message name="LoginRequest">
+    <wsdl:part name="strPID" type="xsd:string"/>
+    <wsdl:part name="strPassword" type="xsd:string"/>
+  </wsdl:message>
+  <wsdl:message name="LoginResponse_msg">
+    <wsdl:part name="return" type="tns:LoginResponse"/>
+  </wsdl:message>
+
+  <wsdl:message name="LogoutRequest">
+    <wsdl:part name="request" type="xsd:string"/>
+  </wsdl:message>
+  <wsdl:message name="LogoutResponse_msg">
+    <wsdl:part name="return" type="xsd:string"/>
+  </wsdl:message>
+
+  <wsdl:message name="Response_msg">
+    <wsdl:part name="return" type="tns:Response"/>
+  </wsdl:message>
+
+  <wsdl:message name="TokenRequest_msg">
+    <wsdl:part name="request" type="tns:TokenRequest"/>
+  </wsdl:message>
+  <wsdl:message name="TokenResponse_msg">
+    <wsdl:part name="return" type="tns:Response"/>
+  </wsdl:message>
+
+  <wsdl:message name="addTransferRequest">
+    <wsdl:part name="strAccountNumberFrom" type="xsd:string"/>
+    <wsdl:part name="strAccountNumberTo" type="xsd:string"/>
+    <wsdl:part name="fAmount" type="xsd:string"/>
+    <wsdl:part name="strDescription" type="xsd:string"/>
+    <wsdl:part name="check" type="xsd:string"/>
+    <wsdl:part name="token" type="xsd:integer"/>
+  </wsdl:message>
+  <wsdl:message name="addTransferResponse">
+    <wsdl:part name="return" type="tns:TransferResponse"/>
+  </wsdl:message>
+
+  <wsdl:message name="getMaxAmountRequest">
+    <wsdl:part name="strAccountNumberFrom" type="xsd:string"/>
+  </wsdl:message>
+  <wsdl:message name="getMaxAmountResponse">
+    <wsdl:part name="return" type="tns:MaxAmountResponse"/>
+  </wsdl:message>
+
+  <wsdl:message name="accountRangeRequest">
+    <wsdl:part name="request" type="tns:rangeRequest"/>
+  </wsdl:message>
+  <wsdl:message name="accountRangeResponse">
+    <wsdl:part name="return" type="tns:rangeResponse"/>
+  </wsdl:message>
+
+  <wsdl:message name="transactionsRequest">
+    <wsdl:part name="strAccountNumber" type="xsd:string"/>
+    <wsdl:part name="intMonth" type="xsd:integer"/>
+    <wsdl:part name="intYear" type="xsd:integer"/>
+  </wsdl:message>
+  <wsdl:message name="transactionsResponse">
+    <wsdl:part name="return" type="tns:accountTransactionsResponse"/>
+  </wsdl:message>
+
+  <wsdl:message name="testTransferRequest">
+    <wsdl:part name="strAccountNumberFrom" type="xsd:string"/>
+    <wsdl:part name="strAccountNumberTo" type="xsd:string"/>
+    <wsdl:part name="fAmount" type="xsd:string"/>
+    <wsdl:part name="strDescription" type="xsd:string"/>
+  </wsdl:message>
+
+  <!--
+      A WSDL `portType` is used to combine multiple `message`s
+      (e.g. input, output) into a single operation.
+   -->
+  <wsdl:portType name="FS_port">
+    
+    <wsdl:operation name="login">
+      <wsdl:input message="tns:LoginRequest"/>
+      <wsdl:output message="tns:LoginResponse_msg"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="logout">
+      <wsdl:input message="tns:LogoutRequest"/>
+      <wsdl:output message="tns:LogoutResponse_msg"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="requestTransferToken">
+      <wsdl:input message="tns:TokenRequest_msg"/>
+      <wsdl:output message="tns:TokenResponse_msg"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="addTransfer">
+      <wsdl:input message="tns:addTransferRequest"/>
+      <wsdl:output message="tns:addTransferResponse"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="getAccountMaxAmount">
+      <wsdl:input message="tns:getMaxAmountRequest"/>
+      <wsdl:output message="tns:getMaxAmountResponse"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="getAccountRange">
+      <wsdl:input message="tns:accountRangeRequest"/>
+      <wsdl:output message="tns:accountRangeResponse"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="getTransactions">
+      <wsdl:input message="tns:transactionsRequest"/>
+      <wsdl:output message="tns:transactionsResponse"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="testTransfer">
+      <wsdl:input message="tns:testTransferRequest"/>
+      <wsdl:output message="tns:Response_msg"/>
+    </wsdl:operation>
+
+  </wsdl:portType>
+
+  <!--
+      The `binding` element defines exactly how each
+      `operation` will take place over the network.
+      In this case, we are using SOAP.
+   -->
+  <wsdl:binding name="FS_SoapBinding" type="tns:FS_port">
+    <soap:binding style="rpc" transport="http://schemas.xmlsoap.org/soap/http"/>
+
+    <wsdl:operation name="login">
+      <soap:operation soapAction="urn:assets/payments/FS/login" style="rpc"/>
+      <wsdl:input>
+        <soap:body use="encoded"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="encoded"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="logout">
+      <soap:operation soapAction="urn:assets/payments/FS/logout" style="rpc"/>
+      <wsdl:input>
+        <soap:body use="encoded"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="encoded"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="requestTransferToken">
+      <soap:operation soapAction="urn:assets/payments/FS/requestTransferToken" style="rpc"/>
+      <wsdl:input>
+        <soap:body use="encoded"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="encoded"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="addTransfer">
+      <soap:operation soapAction="urn:assets/payments/FS/addTransfer" style="rpc"/>
+      <wsdl:input>
+        <soap:body use="encoded"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="encoded"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="getAccountMaxAmount">
+      <soap:operation soapAction="urn:assets/payments/FS/getAccountMaxAmount" style="rpc"/>
+      <wsdl:input>
+        <soap:body use="encoded"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="encoded"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="getAccountRange">
+      <soap:operation soapAction="urn:assets/payments/FS/getAccountRange" style="rpc"/>
+      <wsdl:input>
+        <soap:body use="encoded"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="encoded"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="getTransactions">
+      <soap:operation soapAction="urn:assets/payments/FS/getTransactions" style="rpc"/>
+      <wsdl:input>
+        <soap:body use="encoded"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="encoded"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="testTransfer">
+      <soap:operation soapAction="urn:assets/payments/FS/testTransfer" style="rpc"/>
+      <wsdl:input>
+        <soap:body use="encoded"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="encoded"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+  </wsdl:binding>
+
+  <!--
+      The `service` element finally says where the service
+      can be accessed from - in other words, its endpoint.
+   -->
+  <wsdl:service name="FS">
+    <wsdl:port binding="tns:FS_SoapBinding" name="FS_port">
+      <!-- <soap:address location="https://api3.avfs.org.in/server3.php"/> -->
+      <!-- <soap:address location="https://api3-staging.financialservice.org.in/server3.php"/> -->
+      <!--soap:address location="http://container-sandbox.financialservice.org.in:8812/server3.php"/-->
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>
