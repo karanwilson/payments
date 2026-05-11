@@ -314,7 +314,7 @@ def get_upi_confirmation(bill_no, tran_type, erp_tran_id, before_push_txn=False)
 
 
 @frappe.whitelist()
-def push_txn(invoice_doc, tran_type, amount, tip):
+def push_txn(invoice_doc, tran_type, amount, tip=0):
 	invoice_dict = json.loads(invoice_doc)
 
 	integration_request = None
