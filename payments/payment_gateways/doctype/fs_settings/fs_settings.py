@@ -703,6 +703,9 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 				}
 
 			if fAmount_float > 0:
+				if not fs_acc_balance:
+					#frappe.throw(fs_acc_balance);
+					fs_acc_balance = get_account_max_amount(invoice_dict["customer"])
 				if fAmount_float > float(fs_acc_balance):
 					return {
 						"custom_fs_transfer_status": "Insufficient Funds",
@@ -720,10 +723,12 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 				strAccountNumberFrom = fs_controller.fs_account
 				strAccountNumberTo = invoice_dict["custom_fs_account_number"]
 
-			if "custom_transaction_date" in invoice_dict:
-				trans_date = invoice_dict["custom_transaction_date"]
-			else:
+			# if "custom_transaction_date" in invoice_dict:
+			# 	frappe.throw(str(invoice_dict));
+			if invoice_dict["custom_transaction_date"] is None:
 				trans_date = invoice_dict["posting_date"]
+			else:
+				trans_date = invoice_dict["custom_transaction_date"]
 
 			match invoice_dict["company"]:
 				case "Pour Tous Canteen":
