@@ -1233,6 +1233,39 @@ def fetch_fs_credit_bills():
 		#AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "Retry-Payment", "Failed", "ERR101: Account number (to) '0373' is invalid.", "ERR095: Account (from) "102142" not Active (Suspended, Locked or Closed)");
     )
 
+
+@frappe.whitelist()
+def process_fs_credit_bills():
+	credit_bills = frappe.db.sql(
+    	"""
+		SELECT name
+		FROM `tabSales Invoice`
+		WHERE (docstatus = 1 AND status IN ("Unpaid", "Overdue", "Partly Paid", "Return")
+		AND custom_fs_transfer_status NOT LIKE "OK%"
+		AND (custom_fs_account_number IS NOT NULL AND (custom_customer_group IS NULL OR custom_customer_group IN ("Individual", "Individual-discounts-30%", "Individual-no_discount"))))
+		OR (docstatus = 1 AND status IN ("Unpaid", "Overdue") AND custom_fs_transfer_status LIKE "OK - Paid%"
+		AND (custom_fs_account_number IS NOT NULL AND (custom_customer_group IS NULL OR custom_customer_group IN ("Individual", "Individual-discounts-30%", "Individual-no_discount"))))
+	    """,
+        #as_dict=1,
+		#AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "Retry-Payment", "Failed", "ERR101: Account number (to) '0373' is invalid.", "ERR095: Account (from) "102142" not Active (Suspended, Locked or Closed)");
+    )
+	frappe.enqueue(bulk_processing, credit_bills=credit_bills, queue="long", is_asyn=False, now=True, at_front=True)
+
+def bulk_processing(credit_bills):
+	total_count = len(credit_bills)
+	transfers = 0
+	for i in range(total_count):
+		res = add_transfer_fs_credit_bill(credit_bills[i][0])
+		frappe.publish_progress(
+			int((i/total_count)*100),
+			title = "Processing FS Credit Bills",
+			description = f"Processing transfer for {i} of {total_count} bills"
+		)
+		if res == "OK":
+			transfers += 1
+
+	frappe.publish_progress(100, title="Task Complete", description=f"Received transfers for {transfers} of {total_count}")
+
 # Also called from payment entry (pe) hook/client-script
 @frappe.whitelist()
 def add_transfer_fs_credit_bill(bill, pe=None):
