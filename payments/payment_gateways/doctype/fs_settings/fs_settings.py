@@ -1249,22 +1249,24 @@ def process_fs_credit_bills():
         #as_dict=1,
 		#AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "Retry-Payment", "Failed", "ERR101: Account number (to) '0373' is invalid.", "ERR095: Account (from) "102142" not Active (Suspended, Locked or Closed)");
     )
-	frappe.enqueue(bulk_processing, credit_bills=credit_bills, queue="long", is_asyn=False, now=True, at_front=True)
+	#frappe.enqueue(bulk_processing, credit_bills=credit_bills, queue="long", is_async=False, now=True, at_front=True)
+	frappe.enqueue(bulk_processing, credit_bills=credit_bills, queue="long", is_async=False, at_front=True)
 
 def bulk_processing(credit_bills):
 	total_count = len(credit_bills)
 	transfers = 0
 	for i in range(total_count):
 		res = add_transfer_fs_credit_bill(credit_bills[i][0])
-		frappe.publish_progress(
-			int((i/total_count)*100),
-			title = "Processing FS Credit Bills",
-			description = f"Processing transfer for {i} of {total_count} bills"
-		)
+		# frappe.publish_progress(
+		# 	int((i/total_count)*100),
+		# 	title = "Processing FS Credit Bills",
+		# 	description = f"Processing transfer for {i} of {total_count} bills"
+		# )
 		if res == "OK":
 			transfers += 1
 
-	frappe.publish_progress(100, title="Task Complete", description=f"Received transfers for {transfers} of {total_count}")
+	#frappe.publish_progress(100, title="Task Complete", description=f"Received transfers for {transfers} of {total_count}")
+	frappe.msgprint(f"Received transfers for {transfers} of {total_count}")
 
 # Also called from payment entry (pe) hook/client-script
 @frappe.whitelist()
