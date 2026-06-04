@@ -626,11 +626,12 @@ def refund_fs_payments_si(invoice_name, integration_request_existing, paid_fAmou
 def verify_existing_integration_request(doc, method):
 	#if doc.is_new() == 1 and frappe.db.exists("Integration Request", {"reference_docname": doc.reference_docname}):
 	if doc.integration_request_service == 'FS':
-		res = frappe.db.exists("Integration Request", {"reference_docname": doc.reference_docname})
+		res = frappe.db.exists("Integration Request", {
+			"reference_docname": doc.reference_docname,
+			"status": "Completed"
+		})
 		if res:
-			integration_request = frappe.get_doc("Integration Request", res)
-			if integration_request.status == "Completed":
-				frappe.throw("Duplicate Payment Request, please verify the previous payment status")
+			frappe.throw("Duplicate Payment Request, please verify the previous payment status")
 
 
 @frappe.whitelist()
@@ -640,8 +641,12 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance=None):
 
 	integration_request = None
 
-	integration_request_existing = frappe.db.exists("Integration Request", {"reference_docname": invoice_dict["name"]})
 	#integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_dict["name"]}, "name")
+	#integration_request_existing = frappe.db.exists("Integration Request", {"reference_docname": invoice_dict["name"]})
+	integration_request_existing = frappe.db.exists("Integration Request", {
+		"reference_docname": invoice_dict["name"],
+		"status": "Completed"
+	})
 
 	if integration_request_existing:
 		integration_request = frappe.get_doc("Integration Request", integration_request_existing)
@@ -649,10 +654,10 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance=None):
 			data = json.loads(integration_request.data)
 			# appending the integration_request name field as Transaction ID in strDescription
 			if abs(fAmount_float) == float(data["fAmount"]): # converting to abs for return bills
-				remarks = _("{0}/{1}").format(data["strDescription"], integration_request.name)
+				trans_detail = _("{0}/{1}").format(data["strDescription"], integration_request.name)
 				return {
 					"custom_fs_transfer_status": "OK",
-					"strDescription": data["strDescription"],
+					"strDescription": trans_detail,
 					"remarks": str(data),
 				}
 			else:
