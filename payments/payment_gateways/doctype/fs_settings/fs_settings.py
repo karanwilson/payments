@@ -631,7 +631,8 @@ def verify_existing_integration_request(doc, method):
 			"status": "Completed"
 		})
 		if res:
-			frappe.throw("Duplicate Payment Request, please verify the previous payment status")
+			if res != doc.name:
+				frappe.throw("Duplicate Payment Request, please verify the previous payment status")
 
 
 @frappe.whitelist()
@@ -1229,8 +1230,8 @@ def process_fs_credit_bills():
         #as_dict=1,
 		#AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "Retry-Payment", "Failed", "ERR101: Account number (to) '0373' is invalid.", "ERR095: Account (from) "102142" not Active (Suspended, Locked or Closed)");
     )
-	#frappe.enqueue(bulk_processing, credit_bills=credit_bills, queue="long", is_async=False, now=True, at_front=True)
-	frappe.enqueue(bulk_processing, credit_bills=credit_bills, queue="long", is_async=False, at_front=True)
+	#frappe.enqueue(bulk_processing, credit_bills=credit_bills, queue="long", timeout=6000, is_async=False, now=True, at_front=True)
+	frappe.enqueue(bulk_processing, credit_bills=credit_bills, queue="long", timeout=6000, is_async=False, at_front=True)
 
 def bulk_processing(credit_bills):
 	total_count = len(credit_bills)
