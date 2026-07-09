@@ -631,8 +631,11 @@ def verify_existing_integration_request(doc, method):
 			"status": "Completed"
 		})
 		if res:
-			if res != doc.name:
-				frappe.throw("Duplicate Payment Request, please verify the previous payment status")
+			# !! instead check for "Reference Document Name" here - it should not be the same !!
+			# integration_request = frappe.get_doc("Integration Request", res)
+			# if integration_request.reference_docname == doc.reference_docname:
+			# if res != doc.name:
+			frappe.throw("Duplicate Payment Request, please verify the previous payment status")
 
 
 @frappe.whitelist()
