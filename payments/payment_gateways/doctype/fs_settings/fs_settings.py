@@ -1220,6 +1220,19 @@ def fetch_fs_credit_bills():
 
 @frappe.whitelist()
 def process_fs_credit_bills():
+	from threading import Timer
+	process_credits_in_progress = int(frappe.db.get_value("FS Settings", "FS Settings", "process_credits_in_progress"))
+	if process_credits_in_progress:
+		t = Timer(60.0, frappe.db.set_value("FS Settings", "FS Settings", "process_credits_in_progress", 0))
+		t.start() # resets process_credits_in_progress to 0
+		frappe.msgprint("Sync already in progress, please wait")
+		return
+
+	frappe.db.set_value("FS Settings", "FS Settings", "process_credits_in_progress", 1)
+	t = Timer(60.0, frappe.db.set_value("FS Settings", "FS Settings", "process_credits_in_progress", 0))
+	t.start() # resets process_credits_in_progress to 0
+	frappe.db.commit()
+
 	credit_bills = frappe.db.sql(
     	"""
 		SELECT name
@@ -1241,16 +1254,17 @@ def bulk_processing(credit_bills):
 	transfers = 0
 	for i in range(total_count):
 		res = add_transfer_fs_credit_bill(credit_bills[i][0])
-		# frappe.publish_progress(
-		# 	int((i/total_count)*100),
-		# 	title = "Processing FS Credit Bills",
-		# 	description = f"Processing transfer for {i} of {total_count} bills"
-		# )
+
+		frappe.publish_progress(
+			int((i/total_count)*100),
+			title = "Processing FS Credit Bills",
+			description = f"Processing transfer for {i+1} of {total_count} Credit bills"
+		)
 		if res == "OK":
 			transfers += 1
 
 	#frappe.publish_progress(100, title="Task Complete", description=f"Received transfers for {transfers} of {total_count}")
-	frappe.msgprint(f"Received transfers for {transfers} of {total_count}")
+	frappe.msgprint(f"Received transfers for {transfers} of {total_count} Credit bills")
 
 # Also called from payment entry (pe) hook/client-script
 @frappe.whitelist()
