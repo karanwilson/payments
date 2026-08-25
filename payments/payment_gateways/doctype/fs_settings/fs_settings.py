@@ -406,7 +406,8 @@ def add_transfer_contribution(doc, method):
 @frappe.whitelist()
 def refund_fs_payments_pe(doc, method):
 	if doc.doctype == "Payment Entry":
-		if doc.mode_of_payment == "FS" and doc.custom_receive_from_fs_api and (doc.remarks)[0:27] == "Received transfer request of":
+		# if doc.mode_of_payment == "FS" and doc.custom_receive_from_fs_api and (doc.remarks)[0:28] == "Received transfer request of":
+		if doc.mode_of_payment == "FS" and (doc.remarks)[0:28] == "Received transfer request of":
 			strAccountNumberTo = frappe.get_value("Customer", doc.party, "custom_fs_account_number")
 			customer_name = doc.party_name
 			customer_id = doc.party
@@ -505,6 +506,7 @@ def refund_fs_payments_pe(doc, method):
 
 			integration_request.status = "Completed"
 			integration_request.save(ignore_permissions=True)
+			doc.remarks += "\n---------------\n" + addTransfer_res["Message"] # update/add transfer message to the PE
 
 		else:
 			integration_request.status = "Failed"
@@ -642,9 +644,21 @@ def refund_fs_payments_si(invoice_name, paid_fAmount):
 def verify_existing_integration_request(doc, method):
 	#if doc.is_new() == 1 and frappe.db.exists("Integration Request", {"reference_docname": doc.reference_docname}):
 	if doc.integration_request_service == 'FS':
-		if frappe.db.exists("Integration Request", {"reference_docname": doc.reference_docname}):
-			frappe.throw("Duplicate Payment Request, please verify the previous payment status")
+		res = frappe.db.exists("Integration Request", {
+			"reference_docname": doc.reference_docname,
+			"status": "Completed"
+		})
+		if res:
+			# !! instead check for "Reference Document Name" here - it should not be the same !!
+			# integration_request = frappe.get_doc("Integration Request", res)
+			# if integration_request.reference_docname == doc.reference_docname:
+			# if res != doc.name:
+			if doc.reference_docname:
+				if doc.reference_docname[0:7] == 'SAL-ORD':
+					return # bypassing for Sales-Order 'Payment Entry' transasactions
 
+			frappe.throw("Duplicate Payment Request, please verify the previous payment status")
+			# frappe.throw(str(doc.reference_docname))
 
 @frappe.whitelist()
 def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
@@ -662,10 +676,12 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 			data = json.loads(integration_request.data)
 			# appending the integration_request name field as Transaction ID in strDescription
 			if fAmount_float == float(data["fAmount"]):
-				remarks = _("{0}/{1}").format(data["strDescription"], integration_request.name)
+				trans_detail = _("{0}/{1}").format(data["strDescription"], integration_request.name)
 				return {
 					"custom_fs_transfer_status": "OK",
-					"remarks": remarks
+					"strDescription": trans_detail,
+					"remarks": str(data),
+					# "remarks": remarks
 				}
 			else:
 				frappe.throw("Attention: Invoice amount changed after Payment, kindly cancel the Invoice and re-enter")
@@ -796,6 +812,7 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 			# Explore whether to store the default FS transaction message, or request for a transaction ID..
 			response = {
 				"custom_fs_transfer_status": addTransfer_res["Result"],
+				"strDescription": payment_dict["strDescription"],
 				"remarks": addTransfer_res["Message"]
 			}
 
@@ -827,6 +844,7 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance):
 @frappe.whitelist()
 def fetch_unpaid_sales_orders():
 	today = nowdate()
+	# today = "2026-08-22"
 
 	if frappe.defaults.get_user_default("company") == "Auroville Bakery":
 		return frappe.db.sql(
@@ -863,7 +881,7 @@ def fetch_unpaid_sales_orders():
 		)
 
 @frappe.whitelist()
-def add_transfer_sales_order(order):
+def add_transfer_sales_order(order, pe=None):
 	order_doc = frappe.get_doc("Sales Order", order)
 
 	if order_doc.custom_is_donation:
@@ -1026,11 +1044,37 @@ def add_transfer_sales_order(order):
 	if integration_request_existing:
 		int_req_doc = frappe.get_doc("Integration Request", integration_request_existing)
 		if int_req_doc.status == 'Completed':
-			frappe.msgprint(
-				msg=_("Duplicate Payment Request: Invoice {0} was paid with Integration Request {1}").format(order_doc.name, integration_request_existing),
-				title='Error',
-			)
-			return
+
+			# data = json.loads(int_req_doc.data)
+			# # appending the integration_request name field as Transaction ID in strDescription
+			# reference_no = _("{0}/{1}").format(data["strDescription"], int_req_doc.name)
+
+			if pe:
+				pe_int_req_existing = frappe.get_value("Integration Request", {"reference_docname": pe}, "name")
+				if pe_int_req_existing:
+					pe_int_req_doc = frappe.get_doc("Integration Request", pe_int_req_existing)
+					if pe_int_req_doc.status == 'Completed':
+						data = json.loads(pe_int_req_doc.data)
+						if data["strAccountNumberFrom"] == order_doc.custom_fs_account_number: # case where transfer already done
+							# appending the integration_request name field as Transaction ID in strDescription
+							reference_no = _("{0}/{1}").format(data["strDescription"], pe_int_req_doc.name)
+							return {
+								"custom_fs_transfer_status": "OK - Paid",
+								"reference_no": reference_no,
+								"remarks": data["fs_transfer_response"]
+							}
+
+			# order_doc.custom_fs_transfer_status = "OK - Paid"
+			# order_doc.save()
+			# frappe.db.commit()
+			# return
+
+			else:
+				frappe.msgprint(
+					msg=_("Duplicate Payment Request: Invoice {0} was paid with Integration Request {1}").format(order_doc.name, integration_request_existing),
+					title='Error',
+				)
+				return
 
 		else:
 			integration_request = int_req_doc
@@ -1154,6 +1198,13 @@ def add_transfer_sales_order(order):
 			order_doc.custom_fs_transfer_status = addTransfer_res["Result"]
 			order_doc.save()
 
+			if pe:
+				return {
+					"custom_fs_transfer_status": addTransfer_res["Result"],
+					"reference_no": payment_dict["strDescription"],
+					"remarks": addTransfer_res["Message"]
+				}
+
 			# If FS transfer was successful,
 			# then create a Payment Entry and reconcile with the Sales Invoice
 
@@ -1186,6 +1237,10 @@ def add_transfer_sales_order(order):
 			order_doc.save()
 
 			frappe.db.commit()
+
+			if pe:
+				frappe.throw(str(addTransfer_res["Result"]))
+
 			#frappe.throw(addTransfer_res["Result"])
 
 	except Exception as err:
