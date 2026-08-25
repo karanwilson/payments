@@ -619,8 +619,9 @@ def refund_fs_payments_si(invoice_name, integration_request_existing, paid_fAmou
 		return addTransfer_res["Result"]
 
 	except Exception as err:
+		return addTransfer_res["Result"] # Exceptions are being handled at the calling function
 		#if integration_request is None:
-		raise err
+		# raise err
 
 
 def verify_existing_integration_request(doc, method):
@@ -665,17 +666,34 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance=None):
 					"remarks": str(data),
 				}
 			else:
-				refund_status = refund_fs_payments_si(invoice_dict["name"], integration_request_existing, data["fAmount"])
-				if refund_status == "OK":
-					# changing the integration_request.status above to "Cancelled", after a refund.
+				try:
+					refund_status = refund_fs_payments_si(invoice_dict["name"], integration_request_existing, data["fAmount"])
+				except Exception as err:
+					if refund_status == "OK":
+						frappe.msgprint("Attention: Invoice amount changed after Payment: A Refund was done for the old amount")
+						# changing the integration_request.status above to "Cancelled", after a refund.
+						#frappe.db.set_value(invoice_doc.doctype, invoice_doc.name, "custom_fs_transfer_status", "Refunded: Invoice not submitted")
+					else:
+						frappe.msgprint("Attention: Invoice amount changed after Payment: A Refund was attempted, but failed - Please do a manual refund for the old amount collected")
+
 					integration_request.status = "Cancelled"
 					integration_request.save(ignore_permissions=True)
 					frappe.db.commit()
-					#frappe.db.set_value(invoice_doc.doctype, invoice_doc.name, "custom_fs_transfer_status", "Refunded: Invoice not submitted")
+					# return
+					raise err
+
 				else:
-					frappe.throw("Attention: Invoice amount changed after Payment: A Refund was attempted, but failed - Please try again")
-					#frappe.throw("Attention: Invoice amount changed after Payment, kindly cancel the Invoice and re-enter")
-					return
+					if refund_status == "OK":
+						frappe.msgprint("Attention: Invoice amount changed after Payment: A Refund was done for the old amount")
+						# changing the integration_request.status above to "Cancelled", after a refund.
+						#frappe.db.set_value(invoice_doc.doctype, invoice_doc.name, "custom_fs_transfer_status", "Refunded: Invoice not submitted")
+					else:
+						frappe.msgprint(refund_status)
+						frappe.msgprint("Attention: Invoice amount changed after Payment: A Refund was attempted, but failed - Please do a manual refund for the old amount collected")
+
+					integration_request.status = "Cancelled"
+					integration_request.save(ignore_permissions=True)
+					frappe.db.commit()
 
 	fs_controller = frappe.get_doc("FS Settings")
 	if fs_controller.production:
