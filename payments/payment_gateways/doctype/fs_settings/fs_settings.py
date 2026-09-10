@@ -658,7 +658,7 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance=None):
 	#integration_request_existing = frappe.db.exists("Integration Request", {"reference_docname": invoice_dict["name"]})
 	integration_request_existing = frappe.db.exists("Integration Request", {
 		"reference_docname": invoice_dict["name"],
-		"status": "Completed"
+		# "status": "Completed"
 	})
 
 	if integration_request_existing:
@@ -702,6 +702,28 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance=None):
 					integration_request.status = "Cancelled"
 					integration_request.save(ignore_permissions=True)
 					frappe.db.commit()
+
+		else:
+			current_date = datetime.now().date()
+			current_time_str = datetime.now().strftime("%H:%M:%S")
+
+			int_req_date = integration_request.creation.date()
+			int_req_time_str = integration_request.creation.strftime("%H:%M:%S")
+
+			current_time = datetime.strptime(current_time_str, "%H:%M:%S")
+			int_req_time = datetime.strptime(int_req_time_str, "%H:%M:%S")
+
+			# minutes_difference = ((current_time-int_req_time).total_seconds())/60
+			seconds_difference = ((current_time-int_req_time).total_seconds())
+
+			if int_req_date == current_date:
+				if seconds_difference < 10:
+					response = {
+						"custom_fs_transfer_status": "Duplicate Payment Request, please wait for previous request to complete",
+						"strDescription": "",
+						"remarks": ""
+					}
+					return response
 
 	fs_controller = frappe.get_doc("FS Settings")
 	if fs_controller.production:
@@ -1265,19 +1287,51 @@ def fetch_fs_credit_bills():
 		case "Previous-1":
 			year = date.today().year - 2 """
 
-	return frappe.db.sql(
-    	"""
-		SELECT name
-		FROM `tabSales Invoice`
-		WHERE (docstatus = 1 AND status IN ("Unpaid", "Overdue", "Partly Paid", "Return")
-		AND custom_fs_transfer_status NOT LIKE "OK%"
-		AND (custom_fs_account_number IS NOT NULL AND (custom_customer_group IS NULL OR custom_customer_group IN ("Individual", "Individual-discounts-30%", "Individual-no_discount"))))
-		OR (docstatus = 1 AND status IN ("Unpaid", "Overdue") AND custom_fs_transfer_status LIKE "OK - Paid%"
-		AND (custom_fs_account_number IS NOT NULL AND (custom_customer_group IS NULL OR custom_customer_group IN ("Individual", "Individual-discounts-30%", "Individual-no_discount"))))
-	    """,
-        #as_dict=1,
-		#AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "Retry-Payment", "Failed", "ERR101: Account number (to) '0373' is invalid.", "ERR095: Account (from) "102142" not Active (Suspended, Locked or Closed)");
-    )
+	if frappe.defaults.get_user_default("company") in ("Pour Tous Purchasing Service", "Pour Tous Canteen"):
+		return frappe.db.sql(
+			"""
+			SELECT name
+			FROM `tabSales Invoice`
+			WHERE
+			(
+				docstatus = 1 AND status IN ("Unpaid", "Overdue", "Partly Paid", "Return")
+				AND custom_fs_transfer_status NOT LIKE "OK%"
+				AND custom_fs_account_number IS NOT NULL
+				AND customer_group = "Individual"
+			)
+			OR
+			(
+				docstatus = 1 AND status IN ("Unpaid", "Overdue")
+				AND custom_fs_transfer_status LIKE "OK - Paid%"
+				AND custom_fs_account_number IS NOT NULL
+				AND customer_group = "Individual"
+			)
+			""",
+			#as_dict=1,
+			#AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "Retry-Payment", "Failed", "ERR101: Account number (to) '0373' is invalid.", "ERR095: Account (from) "102142" not Active (Suspended, Locked or Closed)");
+		)
+
+	else:
+		return frappe.db.sql(
+			"""
+			SELECT name
+			FROM `tabSales Invoice`
+			WHERE
+			(
+				docstatus = 1 AND status IN ("Unpaid", "Overdue", "Partly Paid", "Return")
+				AND custom_fs_transfer_status NOT LIKE "OK%"
+				AND (custom_fs_account_number IS NOT NULL AND (custom_customer_group IS NULL OR custom_customer_group IN ("Individual", "Individual-discounts-30%", "Individual-no_discount")))
+			)
+			OR
+			(
+				docstatus = 1 AND status IN ("Unpaid", "Overdue")
+				AND custom_fs_transfer_status LIKE "OK - Paid%"
+				AND (custom_fs_account_number IS NOT NULL AND (custom_customer_group IS NULL OR custom_customer_group IN ("Individual", "Individual-discounts-30%", "Individual-no_discount")))
+			)
+			""",
+			#as_dict=1,
+			#AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "Retry-Payment", "Failed", "ERR101: Account number (to) '0373' is invalid.", "ERR095: Account (from) "102142" not Active (Suspended, Locked or Closed)");
+		)
 
 # Also called from payment entry (pe) hook/client-script
 @frappe.whitelist()
