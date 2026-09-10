@@ -1060,12 +1060,12 @@ def add_transfer_sales_order(order, pe=None):
 	# if exists, fetch the existing integration request
 	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": order_doc.name}, "name")
 	if integration_request_existing:
-		int_req_doc = frappe.get_doc("Integration Request", integration_request_existing)
-		if int_req_doc.status == 'Completed':
+		integration_request = frappe.get_doc("Integration Request", integration_request_existing)
+		if integration_request.status == 'Completed':
 
-			# data = json.loads(int_req_doc.data)
+			# data = json.loads(integration_request.data)
 			# # appending the integration_request name field as Transaction ID in strDescription
-			# reference_no = _("{0}/{1}").format(data["strDescription"], int_req_doc.name)
+			# reference_no = _("{0}/{1}").format(data["strDescription"], integration_request.name)
 
 			if pe:
 				pe_int_req_existing = frappe.get_value("Integration Request", {"reference_docname": pe}, "name")
@@ -1095,11 +1095,25 @@ def add_transfer_sales_order(order, pe=None):
 				return
 
 		else:
-			integration_request = int_req_doc
-			""" order_doc.custom_fs_transfer_status = int_req_doc.status
-			order_doc.save()
-			frappe.db.commit() """
+			current_date = datetime.now().date()
+			current_time_str = datetime.now().strftime("%H:%M:%S")
 
+			int_req_date = integration_request.creation.date()
+			int_req_time_str = integration_request.creation.strftime("%H:%M:%S")
+
+			current_time = datetime.strptime(current_time_str, "%H:%M:%S")
+			int_req_time = datetime.strptime(int_req_time_str, "%H:%M:%S")
+
+			# minutes_difference = ((current_time-int_req_time).total_seconds())/60
+			seconds_difference = ((current_time-int_req_time).total_seconds())
+
+			if int_req_date == current_date:
+				if seconds_difference < 10:
+					frappe.msgprint(
+						msg=_("Duplicate Payment Request: Invoice {0} was paid with Integration Request {1}").format(order_doc.name, integration_request_existing),
+						title='Error',
+					)
+					return
 
 	fs_controller = frappe.get_doc("FS Settings")
 
@@ -1333,6 +1347,55 @@ def fetch_fs_credit_bills():
 			#AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "Retry-Payment", "Failed", "ERR101: Account number (to) '0373' is invalid.", "ERR095: Account (from) "102142" not Active (Suspended, Locked or Closed)");
 		)
 
+@frappe.whitelist()
+def process_fs_credit_bills():
+	from threading import Timer
+	process_credits_in_progress = int(frappe.db.get_value("FS Settings", "FS Settings", "process_credits_in_progress"))
+	if process_credits_in_progress:
+		t = Timer(60.0, frappe.db.set_value("FS Settings", "FS Settings", "process_credits_in_progress", 0))
+		t.start() # resets process_credits_in_progress to 0
+		frappe.msgprint("Sync already in progress, please wait")
+		return
+
+	frappe.db.set_value("FS Settings", "FS Settings", "process_credits_in_progress", 1)
+	t = Timer(60.0, frappe.db.set_value("FS Settings", "FS Settings", "process_credits_in_progress", 0))
+	t.start() # resets process_credits_in_progress to 0
+	frappe.db.commit()
+
+	credit_bills = frappe.db.sql(
+    	"""
+		SELECT name
+		FROM `tabSales Invoice`
+		WHERE (docstatus = 1 AND status IN ("Unpaid", "Overdue", "Partly Paid", "Return")
+		AND custom_fs_transfer_status NOT LIKE "OK%"
+		AND (custom_fs_account_number IS NOT NULL AND (custom_customer_group IS NULL OR custom_customer_group IN ("Individual", "Individual-discounts-30%", "Individual-no_discount"))))
+		OR (docstatus = 1 AND status IN ("Unpaid", "Overdue") AND custom_fs_transfer_status LIKE "OK - Paid%"
+		AND (custom_fs_account_number IS NOT NULL AND (custom_customer_group IS NULL OR custom_customer_group IN ("Individual", "Individual-discounts-30%", "Individual-no_discount"))))
+	    """,
+        #as_dict=1,
+		#AND custom_fs_transfer_status IN ("Insufficient Funds", "Pending", "Retry-Payment", "Failed", "ERR101: Account number (to) '0373' is invalid.", "ERR095: Account (from) "102142" not Active (Suspended, Locked or Closed)");
+    )
+	#frappe.enqueue(bulk_processing, credit_bills=credit_bills, queue="long", timeout=6000, is_async=False, now=True, at_front=True)
+	frappe.enqueue(bulk_processing, credit_bills=credit_bills, queue="long", timeout=6000, is_async=False, at_front=True)
+
+def bulk_processing(credit_bills):
+	total_count = len(credit_bills)
+	transfers = 0
+	for i in range(total_count):
+		res = add_transfer_fs_credit_bill(credit_bills[i][0])
+
+		frappe.publish_progress(
+			int((i/total_count)*100),
+			title = "Processing FS Credit Bills",
+			description = f"Processing transfer for {i+1} of {total_count} Credit bills"
+		)
+		if res == "OK":
+			transfers += 1
+
+	#frappe.publish_progress(100, title="Task Complete", description=f"Received transfers for {transfers} of {total_count}")
+	frappe.msgprint(f"Received transfers for {transfers} of {total_count} Credit bills")
+
+
 # Also called from payment entry (pe) hook/client-script
 @frappe.whitelist()
 def add_transfer_fs_credit_bill(bill, pe=None):
@@ -1356,10 +1419,10 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 		if integration_request.status == "Completed":
 			data = json.loads(integration_request.data)
 			# appending the integration_request name field as Transaction ID in strDescription
-			remarks = _("{0}/{1}").format(data["strDescription"], integration_request.name)
+			trans_detail = _("{0}/{1}").format(data["strDescription"], integration_request.name)
 
 			invoice_doc.custom_fs_transfer_status = "OK - Paid"
-			invoice_doc.custom_fs_transaction_id = data["strDescription"]
+			invoice_doc.custom_fs_transaction_id = trans_detail
 			if invoice_doc.remarks:
 				invoice_doc.remarks += "\n--------------------\n" + str(data)
 			else:
@@ -1370,11 +1433,29 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 			if pe:
 				return {
 					"custom_fs_transfer_status": "OK - Paid",
-					"reference_no": data["strDescription"],
+					"reference_no": trans_detail,
 					"remarks": str(data)
 				}
 			else:
 				return
+
+		else:
+			current_date = datetime.now().date()
+			current_time_str = datetime.now().strftime("%H:%M:%S")
+
+			int_req_date = integration_request.creation.date()
+			int_req_time_str = integration_request.creation.strftime("%H:%M:%S")
+
+			current_time = datetime.strptime(current_time_str, "%H:%M:%S")
+			int_req_time = datetime.strptime(int_req_time_str, "%H:%M:%S")
+
+			# minutes_difference = ((current_time-int_req_time).total_seconds())/60
+			seconds_difference = ((current_time-int_req_time).total_seconds())
+
+			if int_req_date == current_date:
+				if seconds_difference < 10:
+					frappe.msgprint("Duplicate Payment Request, please wait for previous request to complete")
+					return
 
 		res = get_transactions(fs_controller.fs_account, integration_request.creation.date().month, integration_request.creation.date().year)
 		payment_status = check_payment_status(res, invoice_doc.name, fAmount)
@@ -1384,9 +1465,10 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 			integration_request.save(ignore_permissions=True)
 			#frappe.db.commit()
 			data = json.loads(integration_request.data)
+			trans_detail = _("{0}/{1}").format(data["strDescription"], integration_request.name)
 
 			invoice_doc.custom_fs_transfer_status = "OK - Paid"
-			invoice_doc.custom_fs_transaction_id = data["strDescription"]
+			invoice_doc.custom_fs_transaction_id = trans_detail
 			invoice_doc.save()
 			frappe.db.commit()
 
@@ -1441,27 +1523,6 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 				return "OK"
 
 			#return "OK"
-
-		""" integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_doc.name}, "name")
-		if integration_request_existing and invoice_doc.custom_fs_transfer_status != "Retry-Payment":
-			int_req_doc = frappe.get_doc("Integration Request", integration_request_existing)
-			status_msg = int_req_doc.name + ": check FS tx status"
-
-			invoice_doc.custom_fs_transfer_status = status_msg
-			invoice_doc.save()
-			frappe.db.commit()
-			return """
-
-		""" if int_req_doc.status == 'Completed':
-			frappe.msgprint(
-				msg=_("Duplicate Payment Request: Invoice {0} was paid with Integration Request {1}").format(invoice_doc.name, integration_request_existing),
-				title='Error',
-			)
-		else:
-			invoice_doc.custom_fs_transfer_status = int_req_doc.status
-			invoice_doc.save()
-			frappe.db.commit()
-		return """
 
 	cust_fs_acc_number = frappe.get_value("Customer", invoice_doc.customer, "custom_fs_account_number")
 	if not cust_fs_acc_number:
