@@ -696,6 +696,7 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance=None):
 					frappe.db.commit()
 
 		else:
+			# checking for spurious/duplicate requests
 			current_date = datetime.now().date()
 			current_time_str = datetime.now().strftime("%H:%M:%S")
 
@@ -806,14 +807,17 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance=None):
 		#with open('fapi.txt', 'w') as file:
 		#	file.write(str())
 
+		# appending the integration_request name field as Transaction ID in strDescription
+		payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
+
+		# Create an "Integration Request" in case of a fresh transfer
 		if integration_request is None or integration_request.status == "Cancelled":
 			# Create integration log
 			integration_request = create_request_log(payment_dict, service_name="FS")
+		else:
+			integration_request.data += "\n--------------------\n" + json.dumps(payment_dict)
 
 		# frappe.throw(str(integration_request.name))
-
-		# appending the integration_request name field as Transaction ID in strDescription
-		payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
 
 		# FAPI stage-3
 		addTransfer_res = fs_service_proxy.addTransfer(
@@ -1399,8 +1403,9 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 	else:
 		fAmount = invoice_doc.outstanding_amount
 
-	fs_controller = frappe.get_doc("FS Settings")
+	fAmount_float = float(fAmount) # converting to float in order to do math comparisons
 
+	fs_controller = frappe.get_doc("FS Settings")
 	integration_request = None # initialising early, as it is referenced in the except clause
 
 	# if exists, fetch the existing integration request
@@ -1413,27 +1418,59 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 		if integration_request.status == "Completed":
 			data = json.loads(integration_request.data)
 			# appending the integration_request name field as Transaction ID in strDescription
-			trans_detail = _("{0}/{1}").format(data["strDescription"], integration_request.name)
+			if abs(fAmount_float) == float(data["fAmount"]): # converting to abs for return bills
+				trans_detail = _("{0}/{1}").format(data["strDescription"], integration_request.name)
 
-			invoice_doc.custom_fs_transfer_status = "OK - Paid"
-			invoice_doc.custom_fs_transaction_id = trans_detail
-			if invoice_doc.remarks:
-				invoice_doc.remarks += "\n--------------------\n" + str(data)
-			else:
-				invoice_doc.remarks = str(data)
-			invoice_doc.save()
-			frappe.db.commit()
+				invoice_doc.custom_fs_transfer_status = "OK - Paid"
+				invoice_doc.custom_fs_transaction_id = trans_detail
+				if invoice_doc.remarks:
+					invoice_doc.remarks += "\n--------------------\n" + str(data)
+				else:
+					invoice_doc.remarks = str(data)
+				invoice_doc.save()
+				frappe.db.commit()
 
-			if pe:
-				return {
-					"custom_fs_transfer_status": "OK - Paid",
-					"reference_no": trans_detail,
-					"remarks": str(data)
-				}
+				if pe:
+					return {
+						"custom_fs_transfer_status": "OK - Paid",
+						"reference_no": trans_detail,
+						"remarks": str(data)
+					}
+				else:
+					return
+
 			else:
-				return
+				try:
+					refund_status = refund_fs_payments_si(invoice_doc.name, integration_request_existing, data["fAmount"])
+				except Exception as err:
+					if refund_status == "OK":
+						frappe.msgprint("Attention: Invoice amount changed after Payment: A Refund was done for the old amount")
+						# changing the integration_request.status above to "Cancelled", after a refund.
+						#frappe.db.set_value(invoice_doc.doctype, invoice_doc.name, "custom_fs_transfer_status", "Refunded: Invoice not submitted")
+					else:
+						frappe.msgprint("Attention: Invoice amount changed after Payment: A Refund was attempted, but failed - Please do a manual refund for the old amount collected")
+
+					integration_request.status = "Cancelled"
+					integration_request.save(ignore_permissions=True)
+					frappe.db.commit()
+					# return
+					raise err
+
+				else:
+					if refund_status == "OK":
+						frappe.msgprint("Attention: Invoice amount changed after Payment: A Refund was done for the old amount")
+						# changing the integration_request.status above to "Cancelled", after a refund.
+						#frappe.db.set_value(invoice_doc.doctype, invoice_doc.name, "custom_fs_transfer_status", "Refunded: Invoice not submitted")
+					else:
+						frappe.msgprint(refund_status)
+						frappe.msgprint("Attention: Invoice amount changed after Payment: A Refund was attempted, but failed - Please do a manual refund for the old amount collected")
+
+					integration_request.status = "Cancelled"
+					integration_request.save(ignore_permissions=True)
+					frappe.db.commit()
 
 		else:
+			# checking for spurious/duplicate requests
 			current_date = datetime.now().date()
 			current_time_str = datetime.now().strftime("%H:%M:%S")
 
@@ -1640,13 +1677,15 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 					#frappe.db.set_value("Integration Request", integration_request_existing.name, "data", payment_dict_json)
 					break """
 
-			# Create an "Integration Request" in case of a fresh transfer
-			if not integration_request:
-				# Create integration log
-				integration_request = create_request_log(payment_dict, service_name="FS")
-
 			# appending the integration_request name field as Transaction ID in strDescription
 			payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
+
+			# Create an "Integration Request" in case of a fresh transfer
+			if integration_request is None or integration_request.status == "Cancelled":
+				# Create integration log
+				integration_request = create_request_log(payment_dict, service_name="FS")
+			else:
+				integration_request.data += "\n--------------------\n" + json.dumps(payment_dict)
 
 			# FAPI stage-4
 			addTransfer_res = fs_service_proxy.addTransfer(
