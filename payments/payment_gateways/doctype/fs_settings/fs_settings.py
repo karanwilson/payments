@@ -807,15 +807,15 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance=None):
 		#with open('fapi.txt', 'w') as file:
 		#	file.write(str())
 
-		# appending the integration_request name field as Transaction ID in strDescription
-		payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
-
 		# Create an "Integration Request" in case of a fresh transfer
 		if integration_request is None or integration_request.status == "Cancelled":
 			# Create integration log
 			integration_request = create_request_log(payment_dict, service_name="FS")
 		else:
 			integration_request.data += "\n--------------------\n" + json.dumps(payment_dict)
+
+		# appending the integration_request name field as Transaction ID in strDescription
+		payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
 
 		# frappe.throw(str(integration_request.name))
 
@@ -1677,15 +1677,15 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 					#frappe.db.set_value("Integration Request", integration_request_existing.name, "data", payment_dict_json)
 					break """
 
-			# appending the integration_request name field as Transaction ID in strDescription
-			payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
-
 			# Create an "Integration Request" in case of a fresh transfer
 			if integration_request is None or integration_request.status == "Cancelled":
 				# Create integration log
 				integration_request = create_request_log(payment_dict, service_name="FS")
 			else:
 				integration_request.data += "\n--------------------\n" + json.dumps(payment_dict)
+
+			# appending the integration_request name field as Transaction ID in strDescription
+			payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
 
 			# FAPI stage-4
 			addTransfer_res = fs_service_proxy.addTransfer(
