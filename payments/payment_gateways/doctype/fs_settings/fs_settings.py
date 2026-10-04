@@ -362,6 +362,13 @@ def add_transfer_contribution(doc, method):
 				if not integration_request:
 					# Create integration log
 					integration_request = create_request_log(payment_dict, service_name="FS")
+					try:
+						integration_request.custom_idempotency_key = doc.name
+						integration_request.save(ignore_permissions=True)
+					except Exception as err:
+						frappe.throw(str(err))
+					else:
+						integration_request.reload()
 
 				# appending the integration_request name field as Transaction ID in strDescription
 				payment_dict["strDescription"] = _("{0}/{1}").format(payment_dict["strDescription"], integration_request.name)
@@ -483,6 +490,13 @@ def refund_fs_payments_pe(doc, method):
 
 		# Create integration log
 		integration_request = create_request_log(payment_dict, service_name="FS")
+		try:
+			integration_request.custom_idempotency_key = doc.name
+			integration_request.save(ignore_permissions=True)
+		except Exception as err:
+			frappe.throw(str(err))
+		else:
+			integration_request.reload()
 
 		# appending the integration_request name field as Transaction ID in strDescription
 		payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
@@ -599,6 +613,13 @@ def refund_fs_payments_si(invoice_name, integration_request_existing, paid_fAmou
 
 		# Create integration log
 		#integration_request = create_request_log(payment_dict, service_name="FS")
+		# try:
+		# 	integration_request.custom_idempotency_key = doc.name
+		# 	integration_request.save(ignore_permissions=True)
+		# except Exception as err:
+		# 	frappe.throw(str(err))
+		# else:
+		# 	integration_request.reload()
 		#integration_request = frappe.get_doc("Integration Request", integration_request_existing)
 
 		# appending the integration_request name field as Transaction ID in strDescription
@@ -811,6 +832,13 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance=None):
 		if integration_request is None or integration_request.status == "Cancelled":
 			# Create integration log
 			integration_request = create_request_log(payment_dict, service_name="FS")
+			try:
+				integration_request.custom_idempotency_key = invoice_dict["name"]
+				integration_request.save(ignore_permissions=True)
+			except Exception as err:
+				frappe.throw(str(err))
+			else:
+				integration_request.reload()
 		else:
 			integration_request.data += "\n--------------------\n" + json.dumps(payment_dict)
 
@@ -1206,6 +1234,13 @@ def add_transfer_sales_order(order, pe=None):
 		if not integration_request:
 			# Create integration log
 			integration_request = create_request_log(payment_dict, service_name="FS")
+			try:
+				integration_request.custom_idempotency_key = order_doc.name
+				integration_request.save(ignore_permissions=True)
+			except Exception as err:
+				frappe.throw(str(err))
+			else:
+				integration_request.reload()
 
 		# appending the integration_request name field as Transaction ID in strDescription
 		payment_dict["strDescription"] = _("{0}/{1}").format(strDescription, integration_request.name)
@@ -1681,6 +1716,13 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 			if integration_request is None or integration_request.status == "Cancelled":
 				# Create integration log
 				integration_request = create_request_log(payment_dict, service_name="FS")
+				try:
+					integration_request.custom_idempotency_key = invoice_doc.name
+					integration_request.save(ignore_permissions=True)
+				except Exception as err:
+					frappe.throw(str(err))
+				else:
+					integration_request.reload()
 			else:
 				integration_request.data += "\n--------------------\n" + json.dumps(payment_dict)
 
