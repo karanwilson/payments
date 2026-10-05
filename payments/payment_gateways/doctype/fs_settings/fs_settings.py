@@ -1342,9 +1342,10 @@ def fetch_fs_credit_bills():
 			FROM `tabSales Invoice`
 			WHERE
 			(
-				docstatus = 1 AND status IN ("Unpaid", "Overdue", "Partly Paid", "Return")
+				docstatus = 1 AND status IN ("Unpaid", "Overdue", "Partly Paid", "Return", "Submitted")
 				AND custom_fs_transfer_status NOT LIKE "OK%"
 				AND custom_fs_account_number IS NOT NULL
+				AND outstanding_amount > 0
 				AND customer_group = "Individual"
 			)
 			OR
@@ -1352,6 +1353,7 @@ def fetch_fs_credit_bills():
 				docstatus = 1 AND status IN ("Unpaid", "Overdue")
 				AND custom_fs_transfer_status LIKE "OK - Paid%"
 				AND custom_fs_account_number IS NOT NULL
+				AND outstanding_amount > 0
 				AND customer_group = "Individual"
 			)
 			""",
@@ -1366,15 +1368,25 @@ def fetch_fs_credit_bills():
 			FROM `tabSales Invoice`
 			WHERE
 			(
-				docstatus = 1 AND status IN ("Unpaid", "Overdue", "Partly Paid", "Return")
+				docstatus = 1 AND status IN ("Unpaid", "Overdue", "Partly Paid", "Return", "Submitted")
 				AND custom_fs_transfer_status NOT LIKE "OK%"
-				AND (custom_fs_account_number IS NOT NULL AND (custom_customer_group IS NULL OR custom_customer_group IN ("Individual", "Individual-discounts-30%", "Individual-no_discount")))
+				AND custom_fs_account_number IS NOT NULL
+				AND outstanding_amount > 0
+				AND (
+					customer_group IN ("Individual", "Individual-discounts-30%", "Individual-no_discount")
+					OR custom_customer_group IN ("Individual", "Individual-discounts-30%", "Individual-no_discount")
+				)
 			)
 			OR
 			(
 				docstatus = 1 AND status IN ("Unpaid", "Overdue")
 				AND custom_fs_transfer_status LIKE "OK - Paid%"
-				AND (custom_fs_account_number IS NOT NULL AND (custom_customer_group IS NULL OR custom_customer_group IN ("Individual", "Individual-discounts-30%", "Individual-no_discount")))
+				AND custom_fs_account_number IS NOT NULL
+				AND outstanding_amount > 0
+				AND (
+					customer_group IN ("Individual", "Individual-discounts-30%", "Individual-no_discount")
+					OR custom_customer_group IN ("Individual", "Individual-discounts-30%", "Individual-no_discount")
+				)
 			)
 			""",
 			#as_dict=1,
