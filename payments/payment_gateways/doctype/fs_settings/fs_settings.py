@@ -829,7 +829,8 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance=None):
 		#	file.write(str())
 
 		# Create an "Integration Request" in case of a fresh transfer
-		if integration_request is None or integration_request.status == "Cancelled":
+		# if integration_request is None or integration_request.status == "Cancelled":
+		if integration_request is None:
 			# Create integration log
 			integration_request = create_request_log(payment_dict, service_name="FS")
 			try:
@@ -1713,7 +1714,8 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 					break """
 
 			# Create an "Integration Request" in case of a fresh transfer
-			if integration_request is None or integration_request.status == "Cancelled":
+			# if integration_request is None or integration_request.status == "Cancelled":
+			if integration_request is None:
 				# Create integration log
 				integration_request = create_request_log(payment_dict, service_name="FS")
 				try:
