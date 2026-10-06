@@ -310,7 +310,7 @@ def add_transfer_contribution(doc, method):
 	# the function also doesn't run in case a FS Transfer Status has value "OK"
 	if doc.custom_contribution_type:
 
-		integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": doc.name, "status": "completed"}, "name")
+		integration_request_existing = frappe.db.get_value("Integration Request", {"reference_docname": doc.name, "status": "completed"}, "name", for_update=True)
 		if integration_request_existing:
 			return
 
@@ -667,12 +667,12 @@ def add_transfer_billing(invoice_doc, fAmount, fs_acc_balance=None):
 
 	integration_request = None
 
-	#integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_dict["name"]}, "name")
+	integration_request_existing = frappe.db.get_value("Integration Request", {"reference_docname": invoice_dict["name"]}, "name", for_update=True)
 	#integration_request_existing = frappe.db.exists("Integration Request", {"reference_docname": invoice_dict["name"]})
-	integration_request_existing = frappe.db.exists("Integration Request", {
-		"reference_docname": invoice_dict["name"],
-		# "status": "Completed"
-	})
+	# integration_request_existing = frappe.db.exists("Integration Request", {
+	# 	"reference_docname": invoice_dict["name"],
+	# 	# "status": "Completed"
+	# })
 
 	if integration_request_existing:
 		integration_request = frappe.get_doc("Integration Request", integration_request_existing)
@@ -1084,7 +1084,7 @@ def add_transfer_sales_order(order, pe=None):
 	integration_request = None # initialising before the try except statement, as it is referenced in the except clause
 
 	# if exists, fetch the existing integration request
-	integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": order_doc.name}, "name")
+	integration_request_existing = frappe.db.get_value("Integration Request", {"reference_docname": order_doc.name}, "name", for_update=True)
 	if integration_request_existing:
 		integration_request = frappe.get_doc("Integration Request", integration_request_existing)
 		if integration_request.status == 'Completed':
@@ -1457,8 +1457,8 @@ def add_transfer_fs_credit_bill(bill, pe=None):
 	integration_request = None # initialising early, as it is referenced in the except clause
 
 	# if exists, fetch the existing integration request
-	integration_request_existing = frappe.db.exists("Integration Request", {"reference_docname": invoice_doc.name})
-	#integration_request_existing = frappe.get_value("Integration Request", {"reference_docname": invoice_doc.name}, "name")
+	# integration_request_existing = frappe.db.exists("Integration Request", {"reference_docname": invoice_doc.name})
+	integration_request_existing = frappe.db.get_value("Integration Request", {"reference_docname": invoice_doc.name}, "name", for_update=True)
 
 	if integration_request_existing:
 		integration_request = frappe.get_doc("Integration Request", integration_request_existing)
